@@ -4,42 +4,40 @@
 
 @layer base {
   :root {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 90%;
+    --background: 0 0% 6.3%;
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 90%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 90%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 30 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 80%;
+    --secondary: 220 4% 21.5%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 220 4% 5.5%;
+    --muted-foreground: 225 5% 44.5%;
 
-    --accent: 145 70% 45%;
+    --accent: 113 90% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 16%;
+    --border: 0 0% 15%;
+    --input: 0 0% 6%;
     --ring: 30 100% 50%;
 
     --radius: 0.5rem;
 
-    --game-bg: 220 20% 10%;
-    --game-surface: 220 15% 14%;
-    --bet-green: 145 70% 40%;
-    --multiplier-pink: 330 80% 55%;
-    --multiplier-blue: 200 80% 55%;
-    --multiplier-green: 145 70% 50%;
+    --game-bg: 220 26% 4%;
+    --game-surface: 0 0% 11%;
+    --history-teal: 174 63% 40%;
+    --history-purple: 291 39% 51%;
   }
 }
 
@@ -49,21 +47,22 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
-@keyframes fly-up {
-  0% { transform: translateY(0) rotate(0deg); }
-  100% { transform: translateY(-60px) rotate(-15deg); }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-@keyframes pulse-multiplier {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes text-glow {
+  0%, 100% { text-shadow: 0 2px 20px rgba(0,0,0,0.4); }
+  50% { text-shadow: 0 2px 30px rgba(255,255,255,0.1); }
 }
 
-@keyframes curve-path {
-  0% { d: path("M 0 200 Q 100 200 200 180"); }
-  100% { d: path("M 0 200 Q 200 100 400 20"); }
+.animate-text-glow {
+  animation: text-glow 2s ease-in-out infinite;
 }
