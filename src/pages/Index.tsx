@@ -9,9 +9,9 @@ const Index = () => (
     <GameHeader />
     <MultiplierHistory />
     <GameArea />
-    <div className="grid grid-cols-2 gap-1 mt-2 px-1">
+    <div className="mt-2">
       <BetPanel />
-      <BetPanel />
+      <BetPanel showCollapse />
     </div>
     <BetHistory />
   </div>
