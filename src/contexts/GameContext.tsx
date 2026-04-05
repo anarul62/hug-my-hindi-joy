@@ -1,0 +1,153 @@
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+
+type GamePhase = "waiting" | "flying" | "crashed";
+
+type Bet = {
+  amount: number;
+  cashedOut: boolean;
+  cashoutMultiplier: number | null;
+};
+
+type GameContextType = {
+  phase: GamePhase;
+  multiplier: number;
+  balance: number;
+  bets: [Bet | null, Bet | null];
+  placeBet: (panelIndex: 0 | 1, amount: number) => void;
+  cashOut: (panelIndex: 0 | 1) => void;
+  crashHistory: number[];
+};
+
+const GameContext = createContext<GameContextType | null>(null);
+
+export const useGame = () => {
+  const ctx = useContext(GameContext);
+  if (!ctx) throw new Error("useGame must be inside GameProvider");
+  return ctx;
+};
+
+export const GameProvider = ({ children }: { children: ReactNode }) => {
+  const [phase, setPhase] = useState<GamePhase>("waiting");
+  const [multiplier, setMultiplier] = useState(1.0);
+  const [balance, setBalance] = useState(5000);
+  const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
+  const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
+  const crashPoint = useRef(0);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const bgMusic = useRef<HTMLAudioElement | null>(null);
+  const sndWin = useRef<HTMLAudioElement | null>(null);
+  const sndCrash = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    bgMusic.current = new Audio("https://www.tbgameloader.com/800/v37/home/static/media/bg_music.eed9358.mp3");
+    bgMusic.current.loop = true;
+    bgMusic.current.volume = 0.3;
+    sndWin.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
+    sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+
+    const startMusic = () => {
+      bgMusic.current?.play().catch(() => {});
+      document.removeEventListener("click", startMusic);
+    };
+    document.addEventListener("click", startMusic);
+    return () => document.removeEventListener("click", startMusic);
+  }, []);
+
+  // Game loop
+  useEffect(() => {
+    const runRound = () => {
+      // Generate crash point: 1.0 to ~30
+      const r = Math.random();
+      crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
+      if (crashPoint.current > 30) crashPoint.current = 30;
+
+      setMultiplier(1.0);
+      setPhase("waiting");
+
+      // Wait 3s then start flying
+      setTimeout(() => {
+        if (phaseRef.current !== "waiting") return;
+        setPhase("flying");
+      }, 3000);
+    };
+
+    runRound();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "flying") return;
+
+    const interval = setInterval(() => {
+      setMultiplier((prev) => {
+        const speed = prev < 2 ? 0.02 : prev < 5 ? 0.04 : 0.08;
+        const next = parseFloat((prev + speed + Math.random() * speed).toFixed(2));
+        if (next >= crashPoint.current) {
+          // CRASH
+          setPhase("crashed");
+          sndCrash.current?.play().catch(() => {});
+
+          // Lose un-cashed bets
+          setBets((prev) => {
+            prev.forEach((bet) => {
+              if (bet && !bet.cashedOut) {
+                // lost - balance already deducted
+              }
+            });
+            return [null, null];
+          });
+
+          setCrashHistory((h) => [crashPoint.current, ...h].slice(0, 20));
+
+          // Next round after 3s
+          setTimeout(() => {
+            const r = Math.random();
+            crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
+            if (crashPoint.current > 30) crashPoint.current = 30;
+            setMultiplier(1.0);
+            setPhase("waiting");
+            setTimeout(() => {
+              setPhase("flying");
+            }, 3000);
+          }, 3000);
+
+          return crashPoint.current;
+        }
+        return next;
+      });
+    }, 80);
+
+    return () => clearInterval(interval);
+  }, [phase]);
+
+  const placeBet = useCallback((panelIndex: 0 | 1, amount: number) => {
+    if (balance < amount) return;
+    setBalance((b) => b - amount);
+    setBets((prev) => {
+      const next = [...prev] as [Bet | null, Bet | null];
+      next[panelIndex] = { amount, cashedOut: false, cashoutMultiplier: null };
+      return next;
+    });
+  }, [balance]);
+
+  const cashOut = useCallback((panelIndex: 0 | 1) => {
+    setBets((prev) => {
+      const bet = prev[panelIndex];
+      if (!bet || bet.cashedOut) return prev;
+      const winnings = parseFloat((bet.amount * multiplier).toFixed(2));
+      setBalance((b) => b + winnings);
+      sndWin.current?.play().catch(() => {});
+      const next = [...prev] as [Bet | null, Bet | null];
+      next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplier };
+      return next;
+    });
+  }, [multiplier]);
+
+  return (
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory }}>
+      {children}
+    </GameContext.Provider>
+  );
+};
