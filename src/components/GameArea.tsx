@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const GameArea = () => {
   const [multiplier, setMultiplier] = useState(1.0);
   const [isFlying, setIsFlying] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!isFlying) return;
@@ -23,79 +24,107 @@ const GameArea = () => {
     return () => clearInterval(interval);
   }, [isFlying]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw dark rays
+    ctx.save();
+    ctx.translate(w * 0.3, h * 0.8);
+    for (let i = 0; i < 16; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const angle = (i * Math.PI * 2) / 16;
+      ctx.lineTo(Math.cos(angle) * w, Math.sin(angle) * h);
+      ctx.lineTo(Math.cos(angle + 0.12) * w, Math.sin(angle + 0.12) * h);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,255,255,0.02)";
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Draw curve
+    const progress = Math.min(1, (multiplier - 1) / 9);
+    const endX = 40 + progress * (w - 80);
+    const endY = h - 40 - progress * (h - 80);
+
+    ctx.beginPath();
+    ctx.moveTo(20, h - 20);
+    ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
+
+    // Fill under curve
+    const gradient = ctx.createLinearGradient(0, h, endX, endY);
+    gradient.addColorStop(0, "rgba(180, 30, 30, 0.15)");
+    gradient.addColorStop(1, "rgba(180, 30, 30, 0.4)");
+    ctx.lineTo(endX, h - 20);
+    ctx.lineTo(20, h - 20);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Stroke curve
+    ctx.beginPath();
+    ctx.moveTo(20, h - 20);
+    ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
+    ctx.strokeStyle = "rgb(220, 50, 50)";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Draw plane at end
+    ctx.save();
+    ctx.translate(endX, endY - 10);
+    ctx.rotate(-0.4);
+    ctx.fillStyle = "rgb(220, 50, 50)";
+    ctx.beginPath();
+    ctx.moveTo(-15, 5);
+    ctx.lineTo(15, -5);
+    ctx.lineTo(20, -3);
+    ctx.lineTo(18, 0);
+    ctx.lineTo(5, 3);
+    ctx.lineTo(-5, 8);
+    ctx.closePath();
+    ctx.fill();
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(-15, 5);
+    ctx.lineTo(-12, -5);
+    ctx.lineTo(-8, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }, [multiplier, isFlying]);
+
   return (
-    <div className="relative bg-game-bg rounded-xl mx-3 h-[240px] flex items-center justify-center overflow-hidden border border-border">
-      {/* Dark radial rays background */}
-      <div className="absolute inset-0 opacity-30">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute top-1/2 left-1/2 origin-bottom-left"
-            style={{
-              width: "200%",
-              height: "2px",
-              background: "linear-gradient(90deg, transparent, hsl(0 0% 25%), transparent)",
-              transform: `rotate(${i * 30}deg)`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Red curve fill */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 240" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="curveGrad" x1="0" y1="1" x2="0.5" y2="0">
-            <stop offset="0%" stopColor="hsl(350,70%,25%)" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="hsl(350,70%,40%)" stopOpacity="0.4" />
-          </linearGradient>
-        </defs>
-        <path
-          d={`M 0 240 L 0 ${240 - multiplier * 15} Q ${100 + multiplier * 15} ${240 - multiplier * 18} ${Math.min(480, 50 + multiplier * 40)} ${Math.max(30, 240 - multiplier * 22)} L ${Math.min(480, 50 + multiplier * 40)} 240 Z`}
-          fill="url(#curveGrad)"
-        />
-        <path
-          d={`M 0 ${240 - multiplier * 15} Q ${100 + multiplier * 15} ${240 - multiplier * 18} ${Math.min(480, 50 + multiplier * 40)} ${Math.max(30, 240 - multiplier * 22)}`}
-          fill="none"
-          stroke="hsl(350,80%,50%)"
-          strokeWidth="3"
-        />
-      </svg>
-
-      {/* Plane */}
-      <div
-        className="absolute transition-all duration-100 text-destructive"
-        style={{
-          left: `${Math.min(82, 8 + multiplier * 8)}%`,
-          bottom: `${Math.min(78, 8 + multiplier * 7)}%`,
-          transform: "rotate(-20deg)",
-        }}
-      >
-        <svg width="48" height="32" viewBox="0 0 48 32" fill="none">
-          <path d="M4 20 L20 14 L36 8 L44 6 L40 10 L28 14 L20 18 L12 22 Z" fill="hsl(350,80%,50%)" />
-          <path d="M20 14 L24 4 L28 14" fill="hsl(350,80%,50%)" />
-          <path d="M12 22 L14 28 L20 18" fill="hsl(350,80%,50%)" />
-        </svg>
-      </div>
-
-      {/* Dots at bottom */}
-      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
-        {Array.from({ length: 14 }).map((_, i) => (
-          <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent/40" />
-        ))}
-      </div>
-
-      {/* Multiplier display */}
-      <div className="relative z-10 text-center">
-        {isFlying ? (
-          <span
-            className="text-7xl font-black tracking-tight text-foreground"
-            style={{ animation: "pulse-multiplier 1s ease-in-out infinite" }}
-          >
-            {multiplier.toFixed(2)}<span className="text-5xl">x</span>
-          </span>
-        ) : (
-          <span className="text-4xl font-black text-destructive">Flew away!</span>
-        )}
+    <div
+      className="relative w-full overflow-hidden rounded-[14px]"
+      style={{
+        background: "rgb(7, 9, 12)",
+        aspectRatio: "16 / 9.5",
+        border: "1.5px solid rgba(255, 255, 255, 0.08)",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full"
+        width={500}
+        height={296}
+      />
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+        <div className="text-center">
+          {isFlying ? (
+            <p className="text-[64px] font-black leading-none text-foreground animate-text-glow">
+              {multiplier.toFixed(2)}<span className="text-[34px]">x</span>
+            </p>
+          ) : (
+            <p className="text-[40px] font-black text-destructive">Flew away!</p>
+          )}
+        </div>
       </div>
     </div>
   );

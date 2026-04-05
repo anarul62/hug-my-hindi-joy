@@ -5,15 +5,15 @@ import BetPanel from "@/components/BetPanel";
 import BetHistory from "@/components/BetHistory";
 
 const Index = () => (
-  <div className="min-h-screen bg-background max-w-md mx-auto">
+  <div className="mx-auto flex min-h-screen max-w-lg flex-col" style={{ background: "rgb(16, 17, 18)" }}>
     <GameHeader />
-    <MultiplierHistory />
-    <GameArea />
-    <div className="mt-2">
+    <div className="flex flex-1 flex-col gap-[5px] px-[5px] pb-1">
+      <MultiplierHistory />
+      <GameArea />
       <BetPanel />
       <BetPanel showCollapse />
+      <BetHistory />
     </div>
-    <BetHistory />
   </div>
 );
 
