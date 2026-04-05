@@ -83,7 +83,7 @@ const BetPanel = ({ showCollapse = false }: { showCollapse?: boolean }) => {
                 className="rounded-full py-[7px] text-[13px] font-semibold text-foreground/60 hover:text-foreground transition-colors"
                 style={{ background: "rgb(50, 52, 56)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
-                {val.toLocaleString()}₹
+                {val.toLocaleString()}
               </button>
             ))}
           </div>
@@ -92,13 +92,15 @@ const BetPanel = ({ showCollapse = false }: { showCollapse?: boolean }) => {
         {/* BET button */}
         <div className="flex flex-1">
           <button
-            className="flex w-full items-center justify-center rounded-2xl font-black text-[28px] text-white tracking-wide active:scale-95 transition-transform"
+            className="flex w-full flex-col items-center justify-center rounded-2xl text-white active:scale-95 transition-transform"
             style={{
               background: "linear-gradient(180deg, rgb(50, 205, 10) 0%, rgb(30, 160, 5) 100%)",
               boxShadow: "0 4px 15px rgba(40, 180, 10, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
             }}
           >
-            BET
+            <span className="text-[11px] font-semibold opacity-80">Bet (Next Round)</span>
+            <span className="text-[26px] font-black leading-tight">{betAmount.toFixed(2)}</span>
+            <span className="text-[11px] font-semibold opacity-70">BDT</span>
           </button>
         </div>
       </div>
