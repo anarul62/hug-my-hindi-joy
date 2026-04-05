@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Lock, ArrowLeft, CheckCircle, Zap } from "lucide-react";
+import { useGame } from "@/contexts/GameContext";
 
 const API_KEY = "AVIATOR-ADMIN-2024";
 
@@ -8,7 +9,9 @@ const Hack = () => {
   const [apiKey, setApiKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
-  const [nextMultiplier, setNextMultiplier] = useState<number | null>(null);
+  const { phase, multiplier, nextCrashPoint } = useGame();
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showPrediction, setShowPrediction] = useState(false);
 
   const handleUnlock = () => {
     if (apiKey === API_KEY) {
@@ -19,10 +22,37 @@ const Hack = () => {
     }
   };
 
-  const predict = () => {
-    const vals = [2.35, 5.12, 1.87, 10.43, 3.76, 7.21, 1.14, 4.58, 15.32, 2.91];
-    setNextMultiplier(vals[Math.floor(Math.random() * vals.length)]);
-  };
+  // Show prediction 5 seconds before crash (during flying phase)
+  useEffect(() => {
+    if (!unlocked) return;
+
+    if (phase === "flying") {
+      // Estimate time to crash based on current multiplier and crash point
+      const remaining = nextCrashPoint - multiplier;
+      const speed = multiplier < 2 ? 0.03 : multiplier < 5 ? 0.06 : 0.12;
+      const estimatedTicks = remaining / speed;
+      const estimatedSeconds = (estimatedTicks * 80) / 1000;
+
+      if (estimatedSeconds <= 5 && !showPrediction) {
+        setShowPrediction(true);
+        setCountdown(Math.ceil(estimatedSeconds));
+      }
+
+      if (showPrediction && estimatedSeconds > 0) {
+        setCountdown(Math.max(1, Math.ceil(estimatedSeconds)));
+      }
+    }
+
+    if (phase === "waiting") {
+      setShowPrediction(true);
+      setCountdown(5);
+    }
+
+    if (phase === "crashed") {
+      setShowPrediction(false);
+      setCountdown(null);
+    }
+  }, [phase, multiplier, nextCrashPoint, unlocked, showPrediction]);
 
   if (unlocked) {
     return (
@@ -30,21 +60,40 @@ const Hack = () => {
         <div className="bg-card rounded-xl p-8 w-full max-w-md shadow-2xl border border-border text-center">
           <CheckCircle className="w-12 h-12 text-accent mx-auto mb-3" />
           <h1 className="text-2xl font-bold mb-2">Hack Unlocked! ✅</h1>
-          <p className="text-muted-foreground text-sm mb-6">Next round prediction ready</p>
+          <p className="text-muted-foreground text-sm mb-6">Live crash prediction active</p>
 
-          <button
-            onClick={predict}
-            className="w-full bg-accent hover:opacity-90 text-accent-foreground font-bold py-4 rounded-lg transition-opacity flex items-center justify-center gap-2 mb-4"
-          >
-            <Zap className="w-5 h-5" />
-            Predict Next Round
-          </button>
+          {/* Live Status */}
+          <div className="bg-muted rounded-lg p-4 mb-4">
+            <p className="text-xs text-muted-foreground mb-1">Current Phase</p>
+            <p className="text-lg font-bold capitalize" style={{
+              color: phase === "flying" ? "rgb(50, 205, 10)" : phase === "crashed" ? "rgb(220, 50, 50)" : "rgb(230, 160, 10)"
+            }}>
+              {phase === "flying" ? `Flying ${multiplier.toFixed(2)}x` : phase === "crashed" ? "Crashed!" : "Waiting..."}
+            </p>
+          </div>
 
-          {nextMultiplier && (
-            <div className="bg-muted rounded-lg p-6 mb-4">
-              <p className="text-sm text-muted-foreground mb-1">Next Multiplier</p>
-              <p className="text-5xl font-black text-accent">{nextMultiplier.toFixed(2)}x</p>
-              <p className="text-xs text-muted-foreground mt-2">Place your bet now!</p>
+          {/* Prediction */}
+          {showPrediction && (
+            <div className="bg-muted rounded-lg p-6 mb-4 border-2" style={{ borderColor: "rgb(220, 50, 50)" }}>
+              <p className="text-sm font-bold mb-1" style={{ color: "rgb(220, 50, 50)" }}>
+                ⚠️ CRASH PREDICTION
+              </p>
+              <p className="text-5xl font-black text-accent">{nextCrashPoint.toFixed(2)}x</p>
+              {countdown !== null && phase !== "crashed" && (
+                <p className="text-sm mt-2 font-semibold" style={{ color: "rgb(230, 160, 10)" }}>
+                  ~{countdown}s remaining
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                {phase === "waiting" ? "Next round will crash at this point" : "Cash out before this!"}
+              </p>
+            </div>
+          )}
+
+          {phase === "crashed" && (
+            <div className="bg-muted rounded-lg p-4 mb-4">
+              <p className="text-xs text-muted-foreground mb-1">Generating next crash point...</p>
+              <Zap className="w-6 h-6 text-accent mx-auto animate-pulse" />
             </div>
           )}
 

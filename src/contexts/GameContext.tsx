@@ -16,6 +16,7 @@ type GameContextType = {
   placeBet: (panelIndex: 0 | 1, amount: number) => void;
   cashOut: (panelIndex: 0 | 1) => void;
   crashHistory: number[];
+  nextCrashPoint: number;
 };
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -34,7 +35,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
   const crashPoint = useRef(0);
   const phaseRef = useRef(phase);
+  const balanceRef = useRef(balance);
+  const multiplierRef = useRef(multiplier);
   phaseRef.current = phase;
+  balanceRef.current = balance;
+  multiplierRef.current = multiplier;
 
   const bgMusic = useRef<HTMLAudioElement | null>(null);
   const sndWin = useRef<HTMLAudioElement | null>(null);
@@ -55,25 +60,23 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener("click", startMusic);
   }, []);
 
+  const generateCrashPoint = () => {
+    const r = Math.random();
+    crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
+    if (crashPoint.current > 30) crashPoint.current = 30;
+  };
+
   // Game loop
   useEffect(() => {
-    const runRound = () => {
-      // Generate crash point: 1.0 to ~30
-      const r = Math.random();
-      crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
-      if (crashPoint.current > 30) crashPoint.current = 30;
+    generateCrashPoint();
+    setMultiplier(1.0);
+    setPhase("waiting");
 
-      setMultiplier(1.0);
-      setPhase("waiting");
-
-      // Wait 3s then start flying
-      setTimeout(() => {
-        if (phaseRef.current !== "waiting") return;
-        setPhase("flying");
-      }, 3000);
-    };
-
-    runRound();
+    // Wait 5s then start flying
+    setTimeout(() => {
+      if (phaseRef.current !== "waiting") return;
+      setPhase("flying");
+    }, 5000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -90,28 +93,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           sndCrash.current?.play().catch(() => {});
 
           // Lose un-cashed bets
-          setBets((prev) => {
-            prev.forEach((bet) => {
-              if (bet && !bet.cashedOut) {
-                // lost - balance already deducted
-              }
-            });
-            return [null, null];
-          });
+          setBets(() => [null, null]);
 
           setCrashHistory((h) => [crashPoint.current, ...h].slice(0, 20));
 
-          // Next round after 3s
+          // Next round after 5s
           setTimeout(() => {
-            const r = Math.random();
-            crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
-            if (crashPoint.current > 30) crashPoint.current = 30;
+            generateCrashPoint();
             setMultiplier(1.0);
             setPhase("waiting");
             setTimeout(() => {
               setPhase("flying");
-            }, 3000);
-          }, 3000);
+            }, 5000);
+          }, 5000);
 
           return crashPoint.current;
         }
@@ -123,30 +117,30 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [phase]);
 
   const placeBet = useCallback((panelIndex: 0 | 1, amount: number) => {
-    if (balance < amount) return;
+    if (balanceRef.current < amount) return;
     setBalance((b) => b - amount);
     setBets((prev) => {
       const next = [...prev] as [Bet | null, Bet | null];
       next[panelIndex] = { amount, cashedOut: false, cashoutMultiplier: null };
       return next;
     });
-  }, [balance]);
+  }, []);
 
   const cashOut = useCallback((panelIndex: 0 | 1) => {
     setBets((prev) => {
       const bet = prev[panelIndex];
       if (!bet || bet.cashedOut) return prev;
-      const winnings = parseFloat((bet.amount * multiplier).toFixed(2));
+      const winnings = parseFloat((bet.amount * multiplierRef.current).toFixed(2));
       setBalance((b) => b + winnings);
       sndWin.current?.play().catch(() => {});
       const next = [...prev] as [Bet | null, Bet | null];
-      next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplier };
+      next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
       return next;
     });
-  }, [multiplier]);
+  }, []);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current }}>
       {children}
     </GameContext.Provider>
   );
