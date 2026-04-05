@@ -83,7 +83,7 @@ const BetPanel = ({ showCollapse = false }: { showCollapse?: boolean }) => {
                 className="rounded-full py-[7px] text-[13px] font-semibold text-foreground/60 hover:text-foreground transition-colors"
                 style={{ background: "rgb(50, 52, 56)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
-                {val.toLocaleString()}₹
+                {val.toLocaleString()}
               </button>
             ))}
           </div>
