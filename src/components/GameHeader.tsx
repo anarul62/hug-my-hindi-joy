@@ -1,10 +1,17 @@
-import { Menu } from "lucide-react";
+import { Menu, MessageCircle } from "lucide-react";
 
 const GameHeader = () => (
-  <div className="flex items-center justify-between px-4 py-3">
+  <div className="flex items-center justify-between px-3 py-2">
     <span className="text-primary font-black text-xl italic tracking-tight">Aviator</span>
-    <div className="bg-card border border-border px-4 py-1.5 rounded-full text-sm font-bold text-foreground">
-      ₹10
+    <div className="flex items-center gap-2">
+      <div
+        className="px-3 py-1 rounded-full text-[13px] font-bold text-foreground"
+        style={{ background: "rgb(27, 28, 29)", border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        4,927.98 <span className="text-muted-foreground text-[11px]">BDT</span>
+      </div>
+      <Menu className="w-5 h-5 text-muted-foreground cursor-pointer" />
+      <MessageCircle className="w-5 h-5 text-muted-foreground cursor-pointer" />
     </div>
   </div>
 );
