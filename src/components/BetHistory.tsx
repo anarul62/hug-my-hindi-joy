@@ -1,32 +1,25 @@
-import { useState } from "react";
-
-type Bet = {
-  user: string;
-  amount: number;
-  multiplier: number | null;
-  win: number | null;
-};
-
-const bets: Bet[] = [
-  { user: "p***r", amount: 30.84, multiplier: 1.39, win: 42.87 },
-  { user: "a***n", amount: 3989.14, multiplier: null, win: null },
-  { user: "n***r", amount: 201.07, multiplier: 1.14, win: 229.22 },
-  { user: "m***t", amount: 338.32, multiplier: 1.41, win: 477.03 },
-  { user: "i***p", amount: 55.68, multiplier: 1.39, win: 77.40 },
-  { user: "r***n", amount: 88.25, multiplier: null, win: null },
-  { user: "v***k", amount: 2555.59, multiplier: null, win: null },
-  { user: "p***d", amount: 63.40, multiplier: null, win: null },
-  { user: "h***r", amount: 581.69, multiplier: null, win: null },
-  { user: "i***d", amount: 641.62, multiplier: null, win: null },
-  { user: "b***y", amount: 625.84, multiplier: null, win: null },
-  { user: "t***r", amount: 42.88, multiplier: null, win: null },
-];
+import { useState, useEffect } from "react";
+import { generateFakeBets, type FakeBet } from "@/lib/fakeData";
 
 const tabs = ["All Bets", "Previous", "Top"] as const;
 
 const BetHistory = () => {
   const [activeTab, setActiveTab] = useState<typeof tabs[number]>("All Bets");
-  const totalWin = bets.reduce((s, b) => s + (b.win || 0), 0);
+  const [bets, setBets] = useState<FakeBet[]>(() => generateFakeBets(20));
+
+  // Simulate live bets coming in
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBets((prev) => {
+        const newBets = generateFakeBets(Math.floor(Math.random() * 3) + 1);
+        return [...newBets, ...prev].slice(0, 30);
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const totalBets = bets.length;
+  const totalWin = bets.reduce((s, b) => s + (b.cashout || 0), 0);
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: "rgb(27, 28, 29)" }}>
@@ -39,7 +32,7 @@ const BetHistory = () => {
             className="flex-1 py-[7px] text-[12px] font-semibold rounded-full transition-colors"
             style={{
               background: activeTab === tab ? "rgb(44, 45, 48)" : "transparent",
-              color: activeTab === tab ? "rgb(255,255,255)" : "rgb(107, 110, 120)",
+              color: activeTab === tab ? "#fff" : "rgb(107, 110, 120)",
             }}
           >
             {tab}
@@ -49,16 +42,16 @@ const BetHistory = () => {
 
       {/* Stats */}
       <div className="flex justify-between px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span>{bets.length}/{bets.length} Bets</span>
+        <span>{totalBets}/{totalBets} Bets</span>
         <span>
           Total win BDT <span className="text-foreground font-bold ml-1">{totalWin.toFixed(2)}</span>
         </span>
       </div>
 
       {/* Bet rows */}
-      <div className="max-h-40 overflow-y-auto scrollbar-hide">
+      <div className="max-h-[200px] overflow-y-auto scrollbar-hide">
         {bets.map((bet, i) => {
-          const isWinner = bet.win !== null;
+          const isWinner = bet.cashout !== null;
           return (
             <div
               key={i}
@@ -81,8 +74,8 @@ const BetHistory = () => {
               <span className={`col-span-2 text-right font-bold ${bet.multiplier ? "text-purple-400" : "text-muted-foreground"}`}>
                 {bet.multiplier ? `${bet.multiplier.toFixed(2)}x` : "—"}
               </span>
-              <span className={`col-span-3 text-right font-semibold ${bet.win ? "text-foreground" : "text-muted-foreground"}`}>
-                {bet.win ? bet.win.toFixed(2) : "—"}
+              <span className={`col-span-3 text-right font-semibold ${bet.cashout ? "text-foreground" : "text-muted-foreground"}`}>
+                {bet.cashout ? bet.cashout.toFixed(2) : "—"}
               </span>
             </div>
           );
