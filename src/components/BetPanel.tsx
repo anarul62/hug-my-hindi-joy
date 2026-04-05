@@ -1,9 +1,89 @@
 import { useState } from "react";
-import { Minus, Plus, SquareMinus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { useGame } from "@/contexts/GameContext";
 
-const BetPanel = ({ showCollapse = false }: { showCollapse?: boolean }) => {
+const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1; showCollapse?: boolean }) => {
   const [betAmount, setBetAmount] = useState(10.0);
   const [activeTab, setActiveTab] = useState<"bet" | "auto">("bet");
+  const { phase, multiplier, bets, placeBet, cashOut, balance } = useGame();
+
+  const myBet = bets[panelIndex];
+  const hasBet = myBet !== null;
+  const canBet = !hasBet && betAmount <= balance;
+  const canCashOut = hasBet && !myBet.cashedOut && phase === "flying";
+
+  const handleMainButton = () => {
+    if (canCashOut) {
+      cashOut(panelIndex);
+    } else if (!hasBet) {
+      placeBet(panelIndex, betAmount);
+    }
+  };
+
+  const getButtonContent = () => {
+    if (canCashOut) {
+      const winAmount = (myBet!.amount * multiplier).toFixed(2);
+      return (
+        <>
+          <span className="text-[11px] font-semibold opacity-90">Cash Out</span>
+          <span className="text-[24px] font-black leading-tight">{winAmount}</span>
+          <span className="text-[11px] font-semibold opacity-70">BDT</span>
+        </>
+      );
+    }
+    if (hasBet && myBet.cashedOut) {
+      return (
+        <>
+          <span className="text-[11px] font-semibold opacity-80">Won!</span>
+          <span className="text-[22px] font-black leading-tight text-white">{(myBet.amount * (myBet.cashoutMultiplier || 1)).toFixed(2)}</span>
+          <span className="text-[11px] font-semibold opacity-70">{myBet.cashoutMultiplier?.toFixed(2)}x</span>
+        </>
+      );
+    }
+    if (hasBet) {
+      return (
+        <>
+          <span className="text-[11px] font-semibold opacity-80">Waiting...</span>
+          <span className="text-[22px] font-black leading-tight">{myBet.amount.toFixed(2)}</span>
+          <span className="text-[11px] font-semibold opacity-70">BDT</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <span className="text-[11px] font-semibold opacity-80">
+          {phase === "flying" ? "Bet (Next Round)" : "Bet"}
+        </span>
+        <span className="text-[26px] font-black leading-tight">{betAmount.toFixed(2)}</span>
+        <span className="text-[11px] font-semibold opacity-70">BDT</span>
+      </>
+    );
+  };
+
+  const getButtonStyle = () => {
+    if (canCashOut) {
+      return {
+        background: "linear-gradient(180deg, rgb(230, 160, 10) 0%, rgb(200, 120, 5) 100%)",
+        boxShadow: "0 4px 15px rgba(230, 160, 10, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+      };
+    }
+    if (hasBet && myBet.cashedOut) {
+      return {
+        background: "linear-gradient(180deg, rgb(80, 80, 85) 0%, rgb(60, 60, 65) 100%)",
+        boxShadow: "none",
+      };
+    }
+    if (hasBet) {
+      return {
+        background: "linear-gradient(180deg, rgb(180, 50, 20) 0%, rgb(140, 30, 10) 100%)",
+        boxShadow: "0 4px 15px rgba(180, 50, 20, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+      };
+    }
+    return {
+      background: "linear-gradient(180deg, rgb(50, 205, 10) 0%, rgb(30, 160, 5) 100%)",
+      boxShadow: "0 4px 15px rgba(40, 180, 10, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+    };
+  };
 
   return (
     <div
@@ -89,18 +169,15 @@ const BetPanel = ({ showCollapse = false }: { showCollapse?: boolean }) => {
           </div>
         </div>
 
-        {/* BET button */}
+        {/* BET / CASHOUT button */}
         <div className="flex flex-1">
           <button
-            className="flex w-full flex-col items-center justify-center rounded-2xl text-white active:scale-95 transition-transform"
-            style={{
-              background: "linear-gradient(180deg, rgb(50, 205, 10) 0%, rgb(30, 160, 5) 100%)",
-              boxShadow: "0 4px 15px rgba(40, 180, 10, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-            }}
+            onClick={handleMainButton}
+            disabled={!canBet && !canCashOut && !hasBet}
+            className="flex w-full flex-col items-center justify-center rounded-2xl text-white active:scale-95 transition-transform disabled:opacity-50"
+            style={getButtonStyle()}
           >
-            <span className="text-[11px] font-semibold opacity-80">Bet (Next Round)</span>
-            <span className="text-[26px] font-black leading-tight">{betAmount.toFixed(2)}</span>
-            <span className="text-[11px] font-semibold opacity-70">BDT</span>
+            {getButtonContent()}
           </button>
         </div>
       </div>

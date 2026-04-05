@@ -1,28 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useGame } from "@/contexts/GameContext";
 
 const GameArea = () => {
-  const [multiplier, setMultiplier] = useState(1.0);
-  const [isFlying, setIsFlying] = useState(true);
+  const { phase, multiplier } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const planeImg = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    if (!isFlying) return;
-    const interval = setInterval(() => {
-      setMultiplier((prev) => {
-        const next = prev + Math.random() * 0.03 + 0.01;
-        if (next > 10) {
-          setIsFlying(false);
-          setTimeout(() => {
-            setMultiplier(1.0);
-            setIsFlying(true);
-          }, 2000);
-          return prev;
-        }
-        return parseFloat(next.toFixed(2));
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, [isFlying]);
+    const img = new Image();
+    img.src = "/plane.svg";
+    img.onload = () => { planeImg.current = img; };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,7 +22,7 @@ const GameArea = () => {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // Draw dark rays
+    // Dark rays
     ctx.save();
     ctx.translate(w * 0.3, h * 0.8);
     for (let i = 0; i < 16; i++) {
@@ -49,21 +37,26 @@ const GameArea = () => {
     }
     ctx.restore();
 
+    if (phase === "waiting") {
+      // Show "Waiting..." text only
+      return;
+    }
+
     // Draw curve
-    const progress = Math.min(1, (multiplier - 1) / 9);
+    const maxMult = 15;
+    const progress = Math.min(1, (multiplier - 1) / (maxMult - 1));
     const endX = 40 + progress * (w - 80);
     const endY = h - 40 - progress * (h - 80);
 
+    // Fill under curve
     ctx.beginPath();
     ctx.moveTo(20, h - 20);
     ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
-
-    // Fill under curve
+    ctx.lineTo(endX, h - 20);
+    ctx.lineTo(20, h - 20);
     const gradient = ctx.createLinearGradient(0, h, endX, endY);
     gradient.addColorStop(0, "rgba(180, 30, 30, 0.15)");
     gradient.addColorStop(1, "rgba(180, 30, 30, 0.4)");
-    ctx.lineTo(endX, h - 20);
-    ctx.lineTo(20, h - 20);
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -71,33 +64,20 @@ const GameArea = () => {
     ctx.beginPath();
     ctx.moveTo(20, h - 20);
     ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
-    ctx.strokeStyle = "rgb(220, 50, 50)";
+    ctx.strokeStyle = phase === "crashed" ? "rgb(150, 40, 40)" : "rgb(220, 50, 50)";
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // Draw plane at end
-    ctx.save();
-    ctx.translate(endX, endY - 10);
-    ctx.rotate(-0.4);
-    ctx.fillStyle = "rgb(220, 50, 50)";
-    ctx.beginPath();
-    ctx.moveTo(-15, 5);
-    ctx.lineTo(15, -5);
-    ctx.lineTo(20, -3);
-    ctx.lineTo(18, 0);
-    ctx.lineTo(5, 3);
-    ctx.lineTo(-5, 8);
-    ctx.closePath();
-    ctx.fill();
-    // Tail
-    ctx.beginPath();
-    ctx.moveTo(-15, 5);
-    ctx.lineTo(-12, -5);
-    ctx.lineTo(-8, 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }, [multiplier, isFlying]);
+    // Draw plane SVG image
+    if (planeImg.current && phase === "flying") {
+      ctx.save();
+      ctx.translate(endX, endY - 5);
+      const angle = Math.atan2(-(endY - (h - 20)), endX - 20) * 0.5;
+      ctx.rotate(-angle * 0.6);
+      ctx.drawImage(planeImg.current, -40, -25, 60, 30);
+      ctx.restore();
+    }
+  }, [multiplier, phase]);
 
   return (
     <div
@@ -117,12 +97,24 @@ const GameArea = () => {
       />
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
         <div className="text-center">
-          {isFlying ? (
+          {phase === "waiting" && (
+            <div>
+              <p className="text-[22px] font-bold text-muted-foreground animate-pulse">
+                Waiting for next round...
+              </p>
+              <p className="text-[14px] text-muted-foreground/60 mt-1">Place your bets</p>
+            </div>
+          )}
+          {phase === "flying" && (
             <p className="text-[64px] font-black leading-none text-foreground animate-text-glow">
               {multiplier.toFixed(2)}<span className="text-[34px]">x</span>
             </p>
-          ) : (
-            <p className="text-[40px] font-black text-destructive">Flew away!</p>
+          )}
+          {phase === "crashed" && (
+            <div>
+              <p className="text-[40px] font-black text-destructive">Flew away!</p>
+              <p className="text-[24px] font-bold text-destructive/70">{multiplier.toFixed(2)}x</p>
+            </div>
           )}
         </div>
       </div>
