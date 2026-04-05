@@ -47,6 +47,18 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        game: {
+          bg: "hsl(var(--game-bg))",
+          surface: "hsl(var(--game-surface))",
+        },
+        bet: {
+          green: "hsl(var(--bet-green))",
+        },
+        multiplier: {
+          pink: "hsl(var(--multiplier-pink))",
+          blue: "hsl(var(--multiplier-blue))",
+          green: "hsl(var(--multiplier-green))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
