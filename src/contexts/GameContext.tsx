@@ -17,6 +17,7 @@ type GameContextType = {
   cashOut: (panelIndex: 0 | 1) => void;
   crashHistory: number[];
   nextCrashPoint: number;
+  waitingCountdown: number;
 };
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -33,10 +34,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [balance, setBalance] = useState(5000);
   const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
   const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
+  const [waitingCountdown, setWaitingCountdown] = useState(5);
   const crashPoint = useRef(0);
   const phaseRef = useRef(phase);
   const balanceRef = useRef(balance);
   const multiplierRef = useRef(multiplier);
+  const waitingTimerRef = useRef<NodeJS.Timeout | null>(null);
   phaseRef.current = phase;
   balanceRef.current = balance;
   multiplierRef.current = multiplier;
@@ -66,11 +69,26 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (crashPoint.current > 30) crashPoint.current = 30;
   };
 
+  const startWaitingCountdown = useCallback(() => {
+    setWaitingCountdown(5);
+    if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
+    const start = Date.now();
+    waitingTimerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const remaining = Math.max(0, 5 - elapsed);
+      setWaitingCountdown(parseFloat(remaining.toFixed(1)));
+      if (remaining <= 0 && waitingTimerRef.current) {
+        clearInterval(waitingTimerRef.current);
+      }
+    }, 100);
+  }, []);
+
   // Game loop
   useEffect(() => {
     generateCrashPoint();
     setMultiplier(1.0);
     setPhase("waiting");
+    startWaitingCountdown();
 
     // Wait 5s then start flying
     setTimeout(() => {
@@ -102,6 +120,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             generateCrashPoint();
             setMultiplier(1.0);
             setPhase("waiting");
+            startWaitingCountdown();
             setTimeout(() => {
               setPhase("flying");
             }, 5000);
@@ -140,7 +159,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current, waitingCountdown }}>
       {children}
     </GameContext.Provider>
   );

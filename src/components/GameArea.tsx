@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useGame } from "@/contexts/GameContext";
 
 const GameArea = () => {
-  const { phase, multiplier } = useGame();
+  const { phase, multiplier, waitingCountdown } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const planeImg = useRef<HTMLImageElement | null>(null);
 
@@ -95,28 +95,35 @@ const GameArea = () => {
         width={500}
         height={296}
       />
-      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-        <div className="text-center">
-          {phase === "waiting" && (
-            <div>
-              <p className="text-[22px] font-bold text-muted-foreground animate-pulse">
-                Waiting for next round...
-              </p>
-              <p className="text-[14px] text-muted-foreground/60 mt-1">Place your bets</p>
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
+        {phase === "waiting" && (
+          <div className="flex flex-col items-center gap-4 w-full px-8">
+            {/* Loading bar container */}
+            <div className="w-full max-w-[280px] h-[6px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-100 ease-linear"
+                style={{
+                  width: `${((5 - waitingCountdown) / 5) * 100}%`,
+                  background: "linear-gradient(90deg, rgb(220, 40, 40), rgb(240, 80, 60))",
+                }}
+              />
             </div>
-          )}
-          {phase === "flying" && (
-            <p className="text-[64px] font-black leading-none text-foreground animate-text-glow">
-              {multiplier.toFixed(2)}<span className="text-[34px]">x</span>
+            <p className="text-[18px] font-bold" style={{ color: "rgb(180, 180, 185)" }}>
+              Waiting for next round <span className="text-foreground">{waitingCountdown.toFixed(1)}s</span>
             </p>
-          )}
-          {phase === "crashed" && (
-            <div>
-              <p className="text-[40px] font-black text-destructive">Flew away!</p>
-              <p className="text-[24px] font-bold text-destructive/70">{multiplier.toFixed(2)}x</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+        {phase === "flying" && (
+          <p className="text-[64px] font-black leading-none text-foreground animate-text-glow">
+            {multiplier.toFixed(2)}<span className="text-[34px]">x</span>
+          </p>
+        )}
+        {phase === "crashed" && (
+          <div className="text-center">
+            <p className="text-[40px] font-black text-destructive">Flew away!</p>
+            <p className="text-[24px] font-bold text-destructive/70">{multiplier.toFixed(2)}x</p>
+          </div>
+        )}
       </div>
     </div>
   );

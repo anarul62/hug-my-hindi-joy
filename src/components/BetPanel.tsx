@@ -9,7 +9,7 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
 
   const myBet = bets[panelIndex];
   const hasBet = myBet !== null;
-  const canBet = !hasBet && betAmount <= balance;
+  const canBet = !hasBet && betAmount <= balance && phase === "waiting";
   const canCashOut = hasBet && !myBet.cashedOut && phase === "flying";
 
   const handleMainButton = () => {
