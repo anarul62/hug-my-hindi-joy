@@ -17,6 +17,7 @@ type GameContextType = {
   cashOut: (panelIndex: 0 | 1) => void;
   crashHistory: number[];
   nextCrashPoint: number;
+  waitingCountdown: number;
 };
 
 const GameContext = createContext<GameContextType | null>(null);
