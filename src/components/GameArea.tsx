@@ -97,22 +97,20 @@ const GameArea = () => {
       />
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
         {phase === "waiting" && (
-          <div className="flex flex-col items-center w-full h-full justify-between py-4 px-6">
-            {/* Top section - Logos */}
-            <div className="flex flex-col items-center gap-1 mt-2">
-              <div className="flex items-center gap-3">
-                <span className="text-[28px] font-black italic" style={{ color: "rgb(220, 40, 40)" }}>UFC</span>
-                <span className="text-[20px] font-light" style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
-                <div className="flex items-center gap-1">
-                  <img src="/plane.svg" alt="plane" className="w-[28px] h-[20px]" style={{ filter: "brightness(0.8) sepia(1) hue-rotate(-30deg) saturate(5)" }} />
-                  <span className="text-[18px] font-bold italic" style={{ color: "rgb(220, 50, 50)" }}>Aviator</span>
-                </div>
+          <div className="flex flex-col items-center justify-center w-full h-full gap-3 px-6">
+            {/* UFC | Aviator */}
+            <div className="flex items-center gap-3">
+              <span className="text-[28px] font-black italic" style={{ color: "rgb(220, 40, 40)" }}>UFC</span>
+              <span className="text-[20px] font-light" style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
+              <div className="flex items-center gap-1">
+                <img src="/plane.svg" alt="plane" className="w-[28px] h-[20px]" style={{ filter: "brightness(0.8) sepia(1) hue-rotate(-30deg) saturate(5)" }} />
+                <span className="text-[18px] font-bold italic" style={{ color: "rgb(220, 50, 50)" }}>Aviator</span>
               </div>
-              <p className="text-[14px] font-extrabold tracking-wider text-white">OFFICIAL PARTNERS</p>
             </div>
+            <p className="text-[14px] font-extrabold tracking-wider text-white">OFFICIAL PARTNERS</p>
 
             {/* Loading bar */}
-            <div className="w-full max-w-[300px] h-[5px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="w-full max-w-[300px] h-[5px] rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div
                 className="h-full rounded-full transition-all duration-100 ease-linear"
                 style={{
@@ -122,36 +120,26 @@ const GameArea = () => {
               />
             </div>
 
-            {/* Bottom section - Plane + SPRIBE badge */}
-            <div className="flex items-end justify-between w-full">
-              {/* Large plane */}
-              <img
-                src="/plane.svg"
-                alt="plane"
-                className="w-[100px] h-[70px] opacity-80"
-                style={{ filter: "brightness(0.7) sepia(1) hue-rotate(-30deg) saturate(4)" }}
-              />
-              {/* SPRIBE badge */}
-              <div
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg"
-                style={{
-                  background: "rgba(40, 60, 30, 0.7)",
-                  border: "1.5px solid rgba(80, 120, 50, 0.6)",
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-[20px] h-[20px] rounded-full" style={{ background: "radial-gradient(circle, rgba(200,200,200,0.9), rgba(100,100,100,0.5))" }} />
-                  <span className="text-[16px] font-bold text-white">SPRIBE</span>
-                </div>
-                <div
-                  className="flex items-center gap-1 px-2 py-0.5 rounded"
-                  style={{ border: "1px solid rgba(80, 160, 50, 0.5)" }}
-                >
-                  <span className="text-[11px] font-semibold" style={{ color: "rgb(140, 200, 100)" }}>Official Game</span>
-                  <span className="text-[12px]">✅</span>
-                </div>
-                <span className="text-[10px]" style={{ color: "rgba(200, 200, 180, 0.7)" }}>Since 2019</span>
+            {/* SPRIBE badge */}
+            <div
+              className="flex flex-col items-center gap-1 px-5 py-2.5 rounded-lg mt-2"
+              style={{
+                background: "rgba(40, 60, 30, 0.7)",
+                border: "1.5px solid rgba(80, 120, 50, 0.6)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-[20px] h-[20px] rounded-full" style={{ background: "radial-gradient(circle, rgba(200,200,200,0.9), rgba(100,100,100,0.5))" }} />
+                <span className="text-[16px] font-bold text-white">SPRIBE</span>
               </div>
+              <div
+                className="flex items-center gap-1 px-2 py-0.5 rounded"
+                style={{ border: "1px solid rgba(80, 160, 50, 0.5)" }}
+              >
+                <span className="text-[11px] font-semibold" style={{ color: "rgb(140, 200, 100)" }}>Official Game</span>
+                <span className="text-[12px]">✅</span>
+              </div>
+              <span className="text-[10px]" style={{ color: "rgba(200, 200, 180, 0.7)" }}>Since 2019</span>
             </div>
           </div>
         )}
