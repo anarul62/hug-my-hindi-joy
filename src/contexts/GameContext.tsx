@@ -120,6 +120,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             generateCrashPoint();
             setMultiplier(1.0);
             setPhase("waiting");
+            startWaitingCountdown();
             setTimeout(() => {
               setPhase("flying");
             }, 5000);
