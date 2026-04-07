@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useGame } from "@/contexts/GameContext";
 
 const GameArea = () => {
-  const { phase, multiplier } = useGame();
+  const { phase, multiplier, waitingCountdown } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const planeImg = useRef<HTMLImageElement | null>(null);
 
