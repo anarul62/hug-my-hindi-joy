@@ -69,11 +69,26 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (crashPoint.current > 30) crashPoint.current = 30;
   };
 
+  const startWaitingCountdown = useCallback(() => {
+    setWaitingCountdown(5);
+    if (waitingTimerRef.current) clearInterval(waitingTimerRef.current);
+    const start = Date.now();
+    waitingTimerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const remaining = Math.max(0, 5 - elapsed);
+      setWaitingCountdown(parseFloat(remaining.toFixed(1)));
+      if (remaining <= 0 && waitingTimerRef.current) {
+        clearInterval(waitingTimerRef.current);
+      }
+    }, 100);
+  }, []);
+
   // Game loop
   useEffect(() => {
     generateCrashPoint();
     setMultiplier(1.0);
     setPhase("waiting");
+    startWaitingCountdown();
 
     // Wait 5s then start flying
     setTimeout(() => {
