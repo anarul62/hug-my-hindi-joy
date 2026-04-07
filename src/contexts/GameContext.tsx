@@ -159,7 +159,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current, waitingCountdown }}>
       {children}
     </GameContext.Provider>
   );
