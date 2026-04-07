@@ -97,20 +97,62 @@ const GameArea = () => {
       />
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
         {phase === "waiting" && (
-          <div className="flex flex-col items-center gap-4 w-full px-8">
-            {/* Loading bar container */}
-            <div className="w-full max-w-[280px] h-[6px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+          <div className="flex flex-col items-center w-full h-full justify-between py-4 px-6">
+            {/* Top section - Logos */}
+            <div className="flex flex-col items-center gap-1 mt-2">
+              <div className="flex items-center gap-3">
+                <span className="text-[28px] font-black italic" style={{ color: "rgb(220, 40, 40)" }}>UFC</span>
+                <span className="text-[20px] font-light" style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
+                <div className="flex items-center gap-1">
+                  <img src="/plane.svg" alt="plane" className="w-[28px] h-[20px]" style={{ filter: "brightness(0.8) sepia(1) hue-rotate(-30deg) saturate(5)" }} />
+                  <span className="text-[18px] font-bold italic" style={{ color: "rgb(220, 50, 50)" }}>Aviator</span>
+                </div>
+              </div>
+              <p className="text-[14px] font-extrabold tracking-wider text-white">OFFICIAL PARTNERS</p>
+            </div>
+
+            {/* Loading bar */}
+            <div className="w-full max-w-[300px] h-[5px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div
                 className="h-full rounded-full transition-all duration-100 ease-linear"
                 style={{
                   width: `${((5 - waitingCountdown) / 5) * 100}%`,
-                  background: "linear-gradient(90deg, rgb(220, 40, 40), rgb(240, 80, 60))",
+                  background: "linear-gradient(90deg, rgb(220, 40, 40), rgb(180, 30, 60))",
                 }}
               />
             </div>
-            <p className="text-[18px] font-bold" style={{ color: "rgb(180, 180, 185)" }}>
-              Waiting for next round <span className="text-foreground">{waitingCountdown.toFixed(1)}s</span>
-            </p>
+
+            {/* Bottom section - Plane + SPRIBE badge */}
+            <div className="flex items-end justify-between w-full">
+              {/* Large plane */}
+              <img
+                src="/plane.svg"
+                alt="plane"
+                className="w-[100px] h-[70px] opacity-80"
+                style={{ filter: "brightness(0.7) sepia(1) hue-rotate(-30deg) saturate(4)" }}
+              />
+              {/* SPRIBE badge */}
+              <div
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg"
+                style={{
+                  background: "rgba(40, 60, 30, 0.7)",
+                  border: "1.5px solid rgba(80, 120, 50, 0.6)",
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-[20px] h-[20px] rounded-full" style={{ background: "radial-gradient(circle, rgba(200,200,200,0.9), rgba(100,100,100,0.5))" }} />
+                  <span className="text-[16px] font-bold text-white">SPRIBE</span>
+                </div>
+                <div
+                  className="flex items-center gap-1 px-2 py-0.5 rounded"
+                  style={{ border: "1px solid rgba(80, 160, 50, 0.5)" }}
+                >
+                  <span className="text-[11px] font-semibold" style={{ color: "rgb(140, 200, 100)" }}>Official Game</span>
+                  <span className="text-[12px]">✅</span>
+                </div>
+                <span className="text-[10px]" style={{ color: "rgba(200, 200, 180, 0.7)" }}>Since 2019</span>
+              </div>
+            </div>
           </div>
         )}
         {phase === "flying" && (
