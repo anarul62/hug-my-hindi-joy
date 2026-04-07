@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Lock, ArrowLeft, CheckCircle, Zap } from "lucide-react";
+import { Lock, ArrowLeft, CheckCircle, Zap, AlertTriangle } from "lucide-react";
 import { useGame } from "@/contexts/GameContext";
 
 const API_KEY = "AVIATOR-ADMIN-2024";
@@ -10,8 +10,6 @@ const Hack = () => {
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
   const { phase, multiplier, nextCrashPoint } = useGame();
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [showPrediction, setShowPrediction] = useState(false);
 
   const handleUnlock = () => {
     if (apiKey === API_KEY) {
@@ -21,38 +19,6 @@ const Hack = () => {
       setError(true);
     }
   };
-
-  // Show prediction 5 seconds before crash (during flying phase)
-  useEffect(() => {
-    if (!unlocked) return;
-
-    if (phase === "flying") {
-      // Estimate time to crash based on current multiplier and crash point
-      const remaining = nextCrashPoint - multiplier;
-      const speed = multiplier < 2 ? 0.03 : multiplier < 5 ? 0.06 : 0.12;
-      const estimatedTicks = remaining / speed;
-      const estimatedSeconds = (estimatedTicks * 80) / 1000;
-
-      if (estimatedSeconds <= 5 && !showPrediction) {
-        setShowPrediction(true);
-        setCountdown(Math.ceil(estimatedSeconds));
-      }
-
-      if (showPrediction && estimatedSeconds > 0) {
-        setCountdown(Math.max(1, Math.ceil(estimatedSeconds)));
-      }
-    }
-
-    if (phase === "waiting") {
-      setShowPrediction(true);
-      setCountdown(5);
-    }
-
-    if (phase === "crashed") {
-      setShowPrediction(false);
-      setCountdown(null);
-    }
-  }, [phase, multiplier, nextCrashPoint, unlocked, showPrediction]);
 
   if (unlocked) {
     return (
@@ -68,32 +34,35 @@ const Hack = () => {
             <p className="text-lg font-bold capitalize" style={{
               color: phase === "flying" ? "rgb(50, 205, 10)" : phase === "crashed" ? "rgb(220, 50, 50)" : "rgb(230, 160, 10)"
             }}>
-              {phase === "flying" ? `Flying ${multiplier.toFixed(2)}x` : phase === "crashed" ? "Crashed!" : "Waiting..."}
+              {phase === "flying" ? `Flying ${multiplier.toFixed(2)}x` : phase === "crashed" ? "Crashed!" : "⏳ Waiting for next round..."}
             </p>
           </div>
 
-          {/* Prediction */}
-          {showPrediction && (
-            <div className="bg-muted rounded-lg p-6 mb-4 border-2" style={{ borderColor: "rgb(220, 50, 50)" }}>
-              <p className="text-sm font-bold mb-1" style={{ color: "rgb(220, 50, 50)" }}>
-                ⚠️ CRASH PREDICTION
-              </p>
-              <p className="text-5xl font-black text-accent">{nextCrashPoint.toFixed(2)}x</p>
-              {countdown !== null && phase !== "crashed" && (
-                <p className="text-sm mt-2 font-semibold" style={{ color: "rgb(230, 160, 10)" }}>
-                  ~{countdown}s remaining
+          {/* Prediction - show during waiting & flying */}
+          {(phase === "waiting" || phase === "flying") && nextCrashPoint > 0 && (
+            <div className="bg-muted rounded-lg p-6 mb-4 border-2 animate-pulse" style={{ borderColor: "rgb(220, 50, 50)" }}>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5" style={{ color: "rgb(220, 50, 50)" }} />
+                <p className="text-sm font-bold" style={{ color: "rgb(220, 50, 50)" }}>
+                  NEXT CRASH POINT
                 </p>
-              )}
+                <AlertTriangle className="w-5 h-5" style={{ color: "rgb(220, 50, 50)" }} />
+              </div>
+              <p className="text-6xl font-black text-accent my-3">{nextCrashPoint.toFixed(2)}x</p>
               <p className="text-xs text-muted-foreground mt-2">
-                {phase === "waiting" ? "Next round will crash at this point" : "Cash out before this!"}
+                {phase === "waiting" 
+                  ? "🔮 Next round will crash at this point — place your bet now!" 
+                  : `⚡ Crash coming! Cash out before ${nextCrashPoint.toFixed(2)}x!`}
               </p>
             </div>
           )}
 
+          {/* Crashed - generating next */}
           {phase === "crashed" && (
-            <div className="bg-muted rounded-lg p-4 mb-4">
-              <p className="text-xs text-muted-foreground mb-1">Generating next crash point...</p>
-              <Zap className="w-6 h-6 text-accent mx-auto animate-pulse" />
+            <div className="bg-muted rounded-lg p-6 mb-4">
+              <p className="text-xs text-muted-foreground mb-2">Round ended. Generating next crash point...</p>
+              <Zap className="w-8 h-8 text-accent mx-auto animate-spin" />
+              <p className="text-xs text-muted-foreground mt-2">Prediction will appear in ~5 seconds</p>
             </div>
           )}
 
