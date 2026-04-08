@@ -35,6 +35,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
   const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
+  const [nextCrashPointState, setNextCrashPointState] = useState(0);
   const crashPoint = useRef(0);
   const phaseRef = useRef(phase);
   const balanceRef = useRef(balance);
@@ -65,8 +66,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const generateCrashPoint = () => {
     const r = Math.random();
-    crashPoint.current = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
-    if (crashPoint.current > 30) crashPoint.current = 30;
+    let cp = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
+    if (cp > 30) cp = 30;
+    crashPoint.current = cp;
+    setNextCrashPointState(cp);
   };
 
   const startWaitingCountdown = useCallback(() => {
@@ -159,7 +162,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: crashPoint.current, waitingCountdown }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: nextCrashPointState, waitingCountdown }}>
       {children}
     </GameContext.Provider>
   );
