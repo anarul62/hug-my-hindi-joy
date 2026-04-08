@@ -35,6 +35,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
   const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
+  const [nextCrashPointState, setNextCrashPointState] = useState(0);
   const crashPoint = useRef(0);
   const phaseRef = useRef(phase);
   const balanceRef = useRef(balance);
