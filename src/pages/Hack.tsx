@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Lock, ArrowLeft, CheckCircle, Zap, AlertTriangle } from "lucide-react";
+import { Lock, ArrowLeft } from "lucide-react";
 import { useGame } from "@/contexts/GameContext";
 
 const API_KEY = "AVIATOR-ADMIN-2024";
@@ -9,7 +9,15 @@ const Hack = () => {
   const [apiKey, setApiKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
-  const { phase, multiplier, nextCrashPoint } = useGame();
+  const { phase, multiplier, nextCrashPoint, crashHistory, waitingCountdown } = useGame();
+  const [clock, setClock] = useState("");
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setClock(new Date().toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleUnlock = () => {
     if (apiKey === API_KEY) {
@@ -22,54 +30,94 @@ const Hack = () => {
 
   if (unlocked) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="bg-card rounded-xl p-8 w-full max-w-md shadow-2xl border border-border text-center">
-          <CheckCircle className="w-12 h-12 text-accent mx-auto mb-3" />
-          <h1 className="text-2xl font-bold mb-2">Hack Unlocked! ✅</h1>
-          <p className="text-muted-foreground text-sm mb-6">Live crash prediction active</p>
+      <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(180deg, #1a0e00 0%, #0a0a0a 40%)" }}>
+        {/* Header */}
+        <div className="text-center pt-6 pb-3">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[14px]">▶</span>
+            <h1 className="text-[28px] font-black" style={{ color: "rgb(255, 140, 0)" }}>AviatorHack</h1>
+          </div>
+          <p className="text-[13px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>Session: 115m remaining</p>
+        </div>
 
-          {/* Live Status */}
-          <div className="bg-muted rounded-lg p-4 mb-4">
-            <p className="text-xs text-muted-foreground mb-1">Current Phase</p>
-            <p className="text-lg font-bold capitalize" style={{
-              color: phase === "flying" ? "rgb(50, 205, 10)" : phase === "crashed" ? "rgb(220, 50, 50)" : "rgb(230, 160, 10)"
-            }}>
-              {phase === "flying" ? `Flying ${multiplier.toFixed(2)}x` : phase === "crashed" ? "Crashed!" : "⏳ Waiting for next round..."}
-            </p>
+        <div className="flex-1 px-4 pb-4 space-y-3">
+          {/* History */}
+          <div className="rounded-lg p-3" style={{ border: "1px solid rgba(255,140,0,0.4)", background: "rgba(255,140,0,0.05)" }}>
+            <p className="text-[11px] font-bold mb-2" style={{ color: "rgb(255, 100, 50)" }}>HISTORY</p>
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
+              {crashHistory.slice(0, 17).map((v, i) => (
+                <span key={i} className="text-[13px] font-semibold" style={{
+                  color: v >= 10 ? "rgb(180, 100, 255)" : v >= 2 ? "rgb(180, 100, 255)" : "rgb(0, 200, 150)"
+                }}>
+                  {v.toFixed(2)}x
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Prediction - show during waiting & flying */}
-          {(phase === "waiting" || phase === "flying") && nextCrashPoint > 0 && (
-            <div className="bg-muted rounded-lg p-6 mb-4 border-2 animate-pulse" style={{ borderColor: "rgb(220, 50, 50)" }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5" style={{ color: "rgb(220, 50, 50)" }} />
-                <p className="text-sm font-bold" style={{ color: "rgb(220, 50, 50)" }}>
-                  NEXT CRASH POINT
+          {/* Next Crash Prediction */}
+          <div className="rounded-lg p-5 text-center" style={{ border: "1.5px solid rgba(255,140,0,0.5)", background: "linear-gradient(180deg, rgba(80,20,0,0.4), rgba(40,10,0,0.6))" }}>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <span className="text-[14px]">🎯</span>
+              <p className="text-[14px] font-bold tracking-wider" style={{ color: "rgb(255, 140, 0)" }}>NEXT CRASH PREDICTION</p>
+            </div>
+            {(phase === "waiting" || phase === "flying") && nextCrashPoint > 0 ? (
+              <>
+                <p className="text-[72px] font-black leading-none my-2" style={{ color: "rgb(180, 100, 255)" }}>
+                  {nextCrashPoint.toFixed(2)}x
                 </p>
-                <AlertTriangle className="w-5 h-5" style={{ color: "rgb(220, 50, 50)" }} />
-              </div>
-              <p className="text-6xl font-black text-accent my-3">{nextCrashPoint.toFixed(2)}x</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {phase === "waiting" 
-                  ? "🔮 Next round will crash at this point — place your bet now!" 
-                  : `⚡ Crash coming! Cash out before ${nextCrashPoint.toFixed(2)}x!`}
-              </p>
-            </div>
-          )}
+                {phase === "flying" && (
+                  <p className="text-[36px] font-bold mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    {multiplier.toFixed(2)}x
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-[20px] font-bold mt-2" style={{ color: "rgba(255,255,255,0.4)" }}>Generating...</p>
+              </>
+            )}
+          </div>
 
-          {/* Crashed - generating next */}
-          {phase === "crashed" && (
-            <div className="bg-muted rounded-lg p-6 mb-4">
-              <p className="text-xs text-muted-foreground mb-2">Round ended. Generating next crash point...</p>
-              <Zap className="w-8 h-8 text-accent mx-auto animate-spin" />
-              <p className="text-xs text-muted-foreground mt-2">Prediction will appear in ~5 seconds</p>
-            </div>
-          )}
+          {/* Plane */}
+          <div className="rounded-lg p-4 flex items-center justify-center" style={{ border: "1px solid rgba(0,180,80,0.3)", background: "rgba(0,60,30,0.3)" }}>
+            <img src="/plane.svg" alt="plane" className="w-[80px] h-[55px]" style={{ filter: "brightness(1.2) saturate(1.5)" }} />
+          </div>
 
-          <Link to="/" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground text-sm transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Game
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg p-3 text-center" style={{ border: "1px solid rgba(255,140,0,0.3)", background: "rgba(255,140,0,0.05)" }}>
+              <p className="text-[10px] font-bold tracking-wider" style={{ color: "rgb(255, 140, 0)" }}>ACCURACY</p>
+              <p className="text-[18px] font-black text-white">99%</p>
+            </div>
+            <div className="rounded-lg p-3 text-center" style={{ border: "1px solid rgba(255,140,0,0.3)", background: "rgba(255,140,0,0.05)" }}>
+              <p className="text-[10px] font-bold tracking-wider" style={{ color: "rgb(255, 140, 0)" }}>MODE</p>
+              <p className="text-[18px] font-black text-white">AUTO</p>
+            </div>
+            <div className="rounded-lg p-3 text-center" style={{ border: "1px solid rgba(255,140,0,0.3)", background: "rgba(255,140,0,0.05)" }}>
+              <p className="text-[10px] font-bold tracking-wider" style={{ color: "rgb(255, 140, 0)" }}>SYNC</p>
+              <p className="text-[18px] font-black" style={{ color: "rgb(0, 200, 100)" }}>LIVE</p>
+            </div>
+          </div>
+
+          {/* Live status bar */}
+          <div className="rounded-lg p-3 flex items-center justify-center gap-2" style={{ border: "1px solid rgba(0,180,80,0.4)", background: "rgba(0,60,30,0.2)" }}>
+            <div className="w-[10px] h-[10px] rounded-full animate-pulse" style={{ background: "rgb(100, 220, 100)" }} />
+            <span className="text-[15px] font-bold" style={{ color: "rgb(100, 220, 100)" }}>
+              LIVE — {phase === "flying" ? `${multiplier.toFixed(2)}x` : phase === "waiting" ? `Waiting ${waitingCountdown.toFixed(0)}s` : "Crashed"}
+            </span>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <Link to="/" className="w-[44px] h-[44px] rounded-lg flex items-center justify-center" style={{ border: "1.5px solid rgba(255,140,0,0.5)", background: "rgba(255,140,0,0.1)" }}>
+            <span className="text-[20px]">🏠</span>
           </Link>
+          <span className="text-[14px]" style={{ color: "rgba(255,255,255,0.4)" }}>{clock}</span>
+          <div className="w-[44px] h-[44px] rounded-lg flex items-center justify-center" style={{ border: "1.5px solid rgba(255,140,0,0.5)", background: "rgba(255,140,0,0.1)" }}>
+            <span className="text-[20px]">📤</span>
+          </div>
         </div>
       </div>
     );

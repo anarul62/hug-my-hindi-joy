@@ -103,7 +103,7 @@ const GameArea = () => {
               <span className="text-[28px] font-black italic" style={{ color: "rgb(220, 40, 40)" }}>UFC</span>
               <span className="text-[20px] font-light" style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
               <div className="flex items-center gap-1">
-                <img src="/plane.svg" alt="plane" className="w-[28px] h-[20px]" style={{ filter: "brightness(0.8) sepia(1) hue-rotate(-30deg) saturate(5)" }} />
+                <img src="/plane.svg" alt="plane" className="w-[70px] h-[50px]" style={{ filter: "brightness(0.8) sepia(1) hue-rotate(-30deg) saturate(5)" }} />
                 <span className="text-[18px] font-bold italic" style={{ color: "rgb(220, 50, 50)" }}>Aviator</span>
               </div>
             </div>
