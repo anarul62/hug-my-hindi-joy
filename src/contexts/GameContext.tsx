@@ -96,6 +96,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     crashPoint.current = cp;
     crashedRef.current = false;
     setNextCrashPointState(cp);
+    channelRef.current?.postMessage({ type: "crash_point", data: { cp } });
   }, []);
 
   const startWaitingCountdown = useCallback(() => {
