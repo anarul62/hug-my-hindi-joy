@@ -108,27 +108,31 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (phase !== "flying") return;
 
     const interval = setInterval(() => {
+      if (crashedRef.current) return;
+      
       setMultiplier((prev) => {
+        if (crashedRef.current) return prev;
         const speed = prev < 2 ? 0.02 : prev < 5 ? 0.04 : 0.08;
         const next = parseFloat((prev + speed + Math.random() * speed).toFixed(2));
         if (next >= crashPoint.current) {
-          // CRASH
+          if (crashedRef.current) return prev;
+          crashedRef.current = true;
+          clearInterval(interval);
+          
           setPhase("crashed");
           sndCrash.current?.play().catch(() => {});
-
-          // Lose un-cashed bets
           setBets(() => [null, null]);
-
           setCrashHistory((h) => [crashPoint.current, ...h].slice(0, 20));
 
-          // Next round after 5s
           setTimeout(() => {
             generateCrashPoint();
             setMultiplier(1.0);
             setPhase("waiting");
             startWaitingCountdown();
             setTimeout(() => {
-              setPhase("flying");
+              if (phaseRef.current === "waiting") {
+                setPhase("flying");
+              }
             }, 5000);
           }, 5000);
 
@@ -138,8 +142,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       });
     }, 80);
 
+    flyingIntervalRef.current = interval;
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, generateCrashPoint, startWaitingCountdown]);
 
   const placeBet = useCallback((panelIndex: 0 | 1, amount: number) => {
     if (balanceRef.current < amount) return;
