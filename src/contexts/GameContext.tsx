@@ -130,6 +130,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (phase !== "flying") return;
+    channelRef.current?.postMessage({ type: "phase", data: { phase: "flying" } });
 
     const interval = setInterval(() => {
       if (crashedRef.current) return;
@@ -144,6 +145,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           clearInterval(interval);
           
           setPhase("crashed");
+          channelRef.current?.postMessage({ type: "phase", data: { phase: "crashed", multiplier: crashPoint.current } });
+          channelRef.current?.postMessage({ type: "crash", data: { crashAt: crashPoint.current } });
           sndCrash.current?.play().catch(() => {});
           setBets(() => [null, null]);
           setCrashHistory((h) => [crashPoint.current, ...h].slice(0, 20));
@@ -152,6 +155,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             generateCrashPoint();
             setMultiplier(1.0);
             setPhase("waiting");
+            channelRef.current?.postMessage({ type: "phase", data: { phase: "waiting", multiplier: 1.0 } });
             startWaitingCountdown();
             setTimeout(() => {
               if (phaseRef.current === "waiting") {
@@ -162,6 +166,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
           return crashPoint.current;
         }
+        channelRef.current?.postMessage({ type: "multiplier", data: { multiplier: next } });
         return next;
       });
     }, 80);
