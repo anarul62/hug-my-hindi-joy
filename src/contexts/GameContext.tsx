@@ -43,9 +43,32 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const multiplierRef = useRef(multiplier);
   const waitingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const flyingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
   phaseRef.current = phase;
   balanceRef.current = balance;
   multiplierRef.current = multiplier;
+
+  // Sync game state across tabs
+  useEffect(() => {
+    const channel = new BroadcastChannel("aviator_game_sync");
+    channelRef.current = channel;
+    channel.onmessage = (e) => {
+      const { type, data } = e.data;
+      if (type === "crash_point") {
+        crashPoint.current = data.cp;
+        crashedRef.current = false;
+        setNextCrashPointState(data.cp);
+      } else if (type === "phase") {
+        setPhase(data.phase);
+        if (data.multiplier !== undefined) setMultiplier(data.multiplier);
+      } else if (type === "multiplier") {
+        setMultiplier(data.multiplier);
+      } else if (type === "crash") {
+        setCrashHistory((h) => [data.crashAt, ...h].slice(0, 20));
+      }
+    };
+    return () => channel.close();
+  }, []);
 
   const bgMusic = useRef<HTMLAudioElement | null>(null);
   const sndWin = useRef<HTMLAudioElement | null>(null);
