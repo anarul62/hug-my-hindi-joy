@@ -37,10 +37,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [waitingCountdown, setWaitingCountdown] = useState(5);
   const [nextCrashPointState, setNextCrashPointState] = useState(0);
   const crashPoint = useRef(0);
+  const crashedRef = useRef(false);
   const phaseRef = useRef(phase);
   const balanceRef = useRef(balance);
   const multiplierRef = useRef(multiplier);
   const waitingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const flyingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   phaseRef.current = phase;
   balanceRef.current = balance;
   multiplierRef.current = multiplier;
