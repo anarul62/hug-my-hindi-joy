@@ -66,13 +66,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener("click", startMusic);
   }, []);
 
-  const generateCrashPoint = () => {
+  const generateCrashPoint = useCallback(() => {
     const r = Math.random();
     let cp = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
     if (cp > 30) cp = 30;
     crashPoint.current = cp;
+    crashedRef.current = false;
     setNextCrashPointState(cp);
-  };
+  }, []);
 
   const startWaitingCountdown = useCallback(() => {
     setWaitingCountdown(5);
