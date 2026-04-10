@@ -74,7 +74,7 @@ const GameArea = () => {
       ctx.translate(endX, endY - 5);
       const angle = Math.atan2(-(endY - (h - 20)), endX - 20) * 0.5;
       ctx.rotate(-angle * 0.6);
-      ctx.drawImage(planeImg.current, -40, -25, 60, 30);
+      ctx.drawImage(planeImg.current, -60, -38, 90, 45);
       ctx.restore();
     }
   }, [multiplier, phase]);
