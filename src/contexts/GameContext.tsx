@@ -112,24 +112,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const channel = new BroadcastChannel(CHANNEL_NAME);
     channelRef.current = channel;
 
-    // Try to become leader
-    const existingLeader = localStorage.getItem(LEADER_KEY);
-    if (!existingLeader) {
-      localStorage.setItem(LEADER_KEY, tabId.current);
-      isLeader.current = true;
-    } else {
-      isLeader.current = false;
-      // Load existing state from leader
-      try {
-        const saved = JSON.parse(localStorage.getItem(STATE_KEY) || "{}");
-        if (saved.crashPoint) {
-          crashPoint.current = saved.crashPoint;
-          setNextCrashPointState(saved.crashPoint);
-        }
-        if (saved.phase) setPhase(saved.phase);
-        if (saved.multiplier) setMultiplier(saved.multiplier);
-      } catch {}
-    }
+    // Always claim leadership — on refresh the old leader is gone
+    localStorage.setItem(LEADER_KEY, tabId.current);
+    isLeader.current = true;
 
     // Listen for state updates from leader
     channel.onmessage = (e) => {
