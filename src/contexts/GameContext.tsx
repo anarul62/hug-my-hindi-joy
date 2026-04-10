@@ -112,15 +112,31 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const channel = new BroadcastChannel(CHANNEL_NAME);
     channelRef.current = channel;
 
-    // Always claim leadership — on refresh the old leader is gone
-    localStorage.setItem(LEADER_KEY, tabId.current);
-    isLeader.current = true;
+    // Check if there's already a leader
+    const existingLeader = localStorage.getItem(LEADER_KEY);
+    if (!existingLeader) {
+      localStorage.setItem(LEADER_KEY, tabId.current);
+      isLeader.current = true;
+    } else {
+      isLeader.current = false;
+      // Request current state from leader
+      channel.postMessage({ type: "request_state" });
+    }
 
-    // Listen for state updates from leader
+    // Listen for messages
     channel.onmessage = (e) => {
-      if (isLeader.current) return; // Leader doesn't listen
-      const { type, phase: p, multiplier: m, crashPoint: cp, history } = e.data;
+      const { type } = e.data;
+
+      if (type === "request_state" && isLeader.current) {
+        // Leader sends current state to new follower
+        broadcastState(phaseRef.current, multiplierRef.current, crashPoint.current, crashHistory);
+        return;
+      }
+
+      if (isLeader.current) return;
+
       if (type === "state") {
+        const { phase: p, multiplier: m, crashPoint: cp, history } = e.data;
         if (p) setPhase(p);
         if (m !== undefined) setMultiplier(m);
         if (cp) {
@@ -130,13 +146,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         }
         if (history) setCrashHistory(history);
       } else if (type === "leader_lost") {
-        // Leader closed, try to become leader
         localStorage.setItem(LEADER_KEY, tabId.current);
         isLeader.current = true;
       }
     };
 
-    // Cleanup: if this tab is leader, release leadership
     const cleanup = () => {
       if (isLeader.current) {
         localStorage.removeItem(LEADER_KEY);
@@ -150,7 +164,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener("beforeunload", cleanup);
       cleanup();
     };
-  }, []);
+  }, [broadcastState]);
 
   // Game loop — only runs if leader
   useEffect(() => {
