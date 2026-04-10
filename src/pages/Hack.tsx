@@ -44,11 +44,10 @@ const Hack = () => {
           {/* History */}
           <div className="rounded-lg p-3" style={{ border: "1px solid rgba(255,140,0,0.4)", background: "rgba(255,140,0,0.05)" }}>
             <p className="text-[11px] font-bold mb-2" style={{ color: "rgb(255, 100, 50)" }}>HISTORY</p>
-            <div className="flex flex-wrap gap-x-2 gap-y-1">
-              {crashHistory.slice(0, 17).map((v, i) => (
-                <span key={i} className="text-[13px] font-semibold" style={{
-                  color: v >= 10 ? "rgb(180, 100, 255)" : v >= 2 ? "rgb(180, 100, 255)" : "rgb(0, 200, 150)"
-                }}>
+            <div className="flex flex-wrap gap-1">
+              {crashHistory.slice(0, 20).map((v, i) => (
+                <span key={i} className="shrink-0 rounded-full px-2.5 py-[3px] text-[11px] font-bold text-white"
+                  style={{ background: v >= 2 ? "rgb(147, 51, 234)" : "rgb(20, 184, 166)" }}>
                   {v.toFixed(2)}x
                 </span>
               ))}
