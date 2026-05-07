@@ -302,6 +302,23 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }, 100);
   }, [broadcastState]);
 
+  // Persist balance + notify callback URL on changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("aviator_balance", String(balance));
+    } catch {}
+    const { callbackUrl, token, memberAccount } = sessionRef.current;
+    if (callbackUrl) {
+      try {
+        const url = new URL(callbackUrl);
+        url.searchParams.set("balance", String(balance));
+        if (token) url.searchParams.set("token", token);
+        if (memberAccount) url.searchParams.set("member_account", memberAccount);
+        fetch(url.toString(), { method: "GET", mode: "no-cors", keepalive: true }).catch(() => {});
+      } catch {}
+    }
+  }, [balance]);
+
   const startNewRound = useCallback(() => {
     clearGameTimers();
 
