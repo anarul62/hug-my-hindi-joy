@@ -48,9 +48,58 @@ const STATE_KEY = "aviator_state";
 const LEADER_TIMEOUT_MS = 4000;
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
+  // Read session from URL params (token, member_account, callback_url, return_url, balance)
+  const sessionRef = useRef<{
+    token: string;
+    memberAccount: string;
+    callbackUrl: string;
+    returnUrl: string;
+  }>({ token: "", memberAccount: "", callbackUrl: "", returnUrl: "" });
+
+  const initialBalance = (() => {
+    if (typeof window === "undefined") return 5000;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token") || "";
+      const memberAccount = params.get("member_account") || "";
+      const callbackUrl = params.get("callback_url") || "";
+      const returnUrl = params.get("return_url") || "";
+      const balanceParam = params.get("balance");
+
+      if (token || memberAccount || callbackUrl || returnUrl) {
+        sessionRef.current = { token, memberAccount, callbackUrl, returnUrl };
+        try {
+          localStorage.setItem(
+            "aviator_session",
+            JSON.stringify(sessionRef.current)
+          );
+        } catch {}
+      } else {
+        try {
+          const raw = localStorage.getItem("aviator_session");
+          if (raw) sessionRef.current = JSON.parse(raw);
+        } catch {}
+      }
+
+      if (balanceParam !== null && !isNaN(Number(balanceParam))) {
+        const b = Number(balanceParam);
+        try {
+          localStorage.setItem("aviator_balance", String(b));
+        } catch {}
+        return b;
+      }
+
+      try {
+        const stored = localStorage.getItem("aviator_balance");
+        if (stored !== null && !isNaN(Number(stored))) return Number(stored);
+      } catch {}
+    } catch {}
+    return 5000;
+  })();
+
   const [phase, setPhase] = useState<GamePhase>("waiting");
   const [multiplier, setMultiplier] = useState(1.0);
-  const [balance, setBalance] = useState(5000);
+  const [balance, setBalance] = useState(initialBalance);
   const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
   const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
