@@ -120,9 +120,20 @@ const GameArea = () => {
               />
             </div>
 
-            {/* SPRIBE badge */}
+            {/* Second loading line above SPRIBE */}
+            <div className="w-full max-w-[260px] h-[4px] rounded-full overflow-hidden -mb-1" style={{ background: "rgba(255,255,255,0.08)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-100 ease-linear"
+                style={{
+                  width: `${((5 - waitingCountdown) / 5) * 100}%`,
+                  background: "linear-gradient(90deg, rgb(255, 180, 40), rgb(220, 80, 30))",
+                }}
+              />
+            </div>
+
+            {/* SPRIBE badge — moved up */}
             <div
-              className="flex flex-col items-center gap-1 px-5 py-2.5 rounded-lg mt-2"
+              className="flex flex-col items-center gap-1 px-5 py-2 rounded-lg -mt-1"
               style={{
                 background: "rgba(40, 60, 30, 0.7)",
                 border: "1.5px solid rgba(80, 120, 50, 0.6)",
