@@ -302,22 +302,66 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }, 100);
   }, [broadcastState]);
 
-  // Persist balance + notify callback URL on changes
+  // Persist balance locally
   useEffect(() => {
     try {
       localStorage.setItem("aviator_balance", String(balance));
     } catch {}
-    const { callbackUrl, token, memberAccount } = sessionRef.current;
-    if (callbackUrl) {
-      try {
-        const url = new URL(callbackUrl);
-        url.searchParams.set("balance", String(balance));
-        if (token) url.searchParams.set("token", token);
-        if (memberAccount) url.searchParams.set("member_account", memberAccount);
-        fetch(url.toString(), { method: "GET", mode: "no-cors", keepalive: true }).catch(() => {});
-      } catch {}
-    }
   }, [balance]);
+
+  const roundIdRef = useRef<string>("");
+
+  // Generate a new round id at the start of each round (when phase becomes waiting)
+  useEffect(() => {
+    if (phase === "waiting") {
+      roundIdRef.current = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+  }, [phase]);
+
+  // POST to the platform callback URL with the standard JSON contract
+  const callCallback = useCallback(
+    async (params: { betAmount: number; winAmount: number }) => {
+      const { callbackUrl, memberAccount } = sessionRef.current;
+      if (!callbackUrl || !memberAccount) return null;
+
+      const payload = {
+        member_account: memberAccount,
+        game_uid: "aviator",
+        bet_amount: params.betAmount,
+        win_amount: params.winAmount,
+        serial_number: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        game_round: roundIdRef.current || `r_${Date.now()}`,
+        currency_code: "BDT",
+      };
+
+      try {
+        const res = await fetch(callbackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => null);
+        if (data && typeof data.balance === "number") {
+          setBalance(data.balance);
+          return data;
+        }
+      } catch (err) {
+        console.warn("Callback failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  // On mount: if we have a session, fetch live balance from the server (bet=0, win=0)
+  useEffect(() => {
+    const { callbackUrl, memberAccount } = sessionRef.current;
+    if (callbackUrl && memberAccount) {
+      callCallback({ betAmount: 0, winAmount: 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const startNewRound = useCallback(() => {
     clearGameTimers();
@@ -539,7 +583,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       next[panelIndex] = { amount, cashedOut: false, cashoutMultiplier: null };
       return next;
     });
-  }, []);
+    // Notify backend: deduct bet
+    callCallback({ betAmount: amount, winAmount: 0 });
+  }, [callCallback]);
 
   const cashOut = useCallback((panelIndex: 0 | 1) => {
     setBets((prev) => {
@@ -548,11 +594,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const winnings = parseFloat((bet.amount * multiplierRef.current).toFixed(2));
       setBalance((b) => b + winnings);
       sndWin.current?.play().catch(() => {});
+      // Notify backend: credit win
+      callCallback({ betAmount: 0, winAmount: winnings });
       const next = [...prev] as [Bet | null, Bet | null];
       next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
       return next;
     });
-  }, []);
+  }, [callCallback]);
 
   return (
     <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: nextCrashPointState, waitingCountdown }}>
