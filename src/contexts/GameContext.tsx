@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 type GamePhase = "waiting" | "flying" | "crashed";
 
@@ -20,18 +21,13 @@ type GameContextType = {
   waitingCountdown: number;
 };
 
-type SyncedGameState = {
+type RoundRow = {
+  id: number;
   phase: GamePhase;
-  multiplier: number;
-  crashPoint: number;
-  history: number[];
-  waitingCountdown: number;
-  updatedAt: number;
-};
-
-type LeaderState = {
-  id: string;
-  updatedAt: number;
+  crash_point: number;
+  waiting_until: string;
+  started_at: string | null;
+  crashed_at: string | null;
 };
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -42,13 +38,13 @@ export const useGame = () => {
   return ctx;
 };
 
-const CHANNEL_NAME = "aviator_game_sync";
-const LEADER_KEY = "aviator_leader";
-const STATE_KEY = "aviator_state";
-const LEADER_TIMEOUT_MS = 4000;
+// Must match SQL: exp(0.06 * elapsed_seconds)
+const computeMultiplier = (elapsedSec: number) => {
+  if (elapsedSec <= 0) return 1.0;
+  return Math.exp(0.06 * elapsedSec);
+};
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  // Read session from URL params (token, member_account, callback_url, return_url, balance)
   const sessionRef = useRef<{
     token: string;
     memberAccount: string;
@@ -68,12 +64,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
       if (token || memberAccount || callbackUrl || returnUrl) {
         sessionRef.current = { token, memberAccount, callbackUrl, returnUrl };
-        try {
-          localStorage.setItem(
-            "aviator_session",
-            JSON.stringify(sessionRef.current)
-          );
-        } catch {}
+        try { localStorage.setItem("aviator_session", JSON.stringify(sessionRef.current)); } catch {}
       } else {
         try {
           const raw = localStorage.getItem("aviator_session");
@@ -83,12 +74,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
       if (balanceParam !== null && !isNaN(Number(balanceParam))) {
         const b = Number(balanceParam);
-        try {
-          localStorage.setItem("aviator_balance", String(b));
-        } catch {}
+        try { localStorage.setItem("aviator_balance", String(b)); } catch {}
         return b;
       }
-
       try {
         const stored = localStorage.getItem("aviator_balance");
         if (stored !== null && !isNaN(Number(stored))) return Number(stored);
@@ -101,148 +89,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [multiplier, setMultiplier] = useState(1.0);
   const [balance, setBalance] = useState(initialBalance);
   const [bets, setBets] = useState<[Bet | null, Bet | null]>([null, null]);
-  const [crashHistory, setCrashHistory] = useState<number[]>([2.45, 1.12, 5.67, 1.89, 3.21, 10.5, 1.05, 2.78, 1.44, 7.32]);
+  const [crashHistory, setCrashHistory] = useState<number[]>([]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
-  const [nextCrashPointState, setNextCrashPointState] = useState(0);
-  const [leaderState, setLeaderState] = useState(false);
+  const [nextCrashPoint, setNextCrashPoint] = useState(0);
 
-  const crashPoint = useRef(0);
-  const crashedRef = useRef(false);
-  const phaseRef = useRef(phase);
+  const currentRoundRef = useRef<RoundRow | null>(null);
+  const roundIdRef = useRef<string>("");
   const balanceRef = useRef(balance);
   const multiplierRef = useRef(multiplier);
-  const crashHistoryRef = useRef(crashHistory);
-  const waitingCountdownRef = useRef(waitingCountdown);
-
-  const waitingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const takeoffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flyingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const leaderHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const isLeader = useRef(false);
-  const tabId = useRef(Math.random().toString(36).slice(2));
-  const channelRef = useRef<BroadcastChannel | null>(null);
-
-  phaseRef.current = phase;
   balanceRef.current = balance;
   multiplierRef.current = multiplier;
-  crashHistoryRef.current = crashHistory;
-  waitingCountdownRef.current = waitingCountdown;
 
   const bgMusic = useRef<HTMLAudioElement | null>(null);
   const sndWin = useRef<HTMLAudioElement | null>(null);
   const sndCrash = useRef<HTMLAudioElement | null>(null);
 
-  const clearGameTimers = useCallback(() => {
-    if (waitingTimerRef.current) {
-      clearInterval(waitingTimerRef.current);
-      waitingTimerRef.current = null;
-    }
-    if (takeoffTimeoutRef.current) {
-      clearTimeout(takeoffTimeoutRef.current);
-      takeoffTimeoutRef.current = null;
-    }
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
-    }
-    if (flyingIntervalRef.current) {
-      clearInterval(flyingIntervalRef.current);
-      flyingIntervalRef.current = null;
-    }
-  }, []);
-
-  const readLeaderState = useCallback((): LeaderState | null => {
-    try {
-      const raw = localStorage.getItem(LEADER_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as LeaderState;
-      return parsed?.id ? parsed : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const readSyncedState = useCallback((): SyncedGameState | null => {
-    try {
-      const raw = localStorage.getItem(STATE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw) as SyncedGameState;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const applySyncedState = useCallback((state: Partial<SyncedGameState> | null | undefined) => {
-    if (!state) return;
-
-    if (state.phase) {
-      setPhase(state.phase);
-      crashedRef.current = state.phase === "crashed";
-    }
-
-    if (typeof state.multiplier === "number") {
-      setMultiplier(state.multiplier);
-    }
-
-    if (typeof state.crashPoint === "number") {
-      crashPoint.current = state.crashPoint;
-      setNextCrashPointState(state.crashPoint);
-    }
-
-    if (Array.isArray(state.history)) {
-      setCrashHistory(state.history);
-    }
-
-    if (typeof state.waitingCountdown === "number") {
-      setWaitingCountdown(state.waitingCountdown);
-    }
-  }, []);
-
-  const createSyncedState = useCallback((overrides: Partial<SyncedGameState> = {}): SyncedGameState => {
-    return {
-      phase: overrides.phase ?? phaseRef.current,
-      multiplier: overrides.multiplier ?? multiplierRef.current,
-      crashPoint: overrides.crashPoint ?? crashPoint.current,
-      history: overrides.history ?? crashHistoryRef.current,
-      waitingCountdown: overrides.waitingCountdown ?? waitingCountdownRef.current,
-      updatedAt: Date.now(),
-    };
-  }, []);
-
-  const broadcastState = useCallback((overrides: Partial<SyncedGameState> = {}) => {
-    const state = createSyncedState(overrides);
-
-    try {
-      localStorage.setItem(STATE_KEY, JSON.stringify(state));
-      channelRef.current?.postMessage({ type: "state", ...state });
-    } catch {}
-  }, [createSyncedState]);
-
-  const writeLeaderHeartbeat = useCallback(() => {
-    try {
-      localStorage.setItem(
-        LEADER_KEY,
-        JSON.stringify({ id: tabId.current, updatedAt: Date.now() })
-      );
-    } catch {}
-  }, []);
-
-  const claimLeadership = useCallback(() => {
-    if (isLeader.current) return;
-    isLeader.current = true;
-    setLeaderState(true);
-    writeLeaderHeartbeat();
-  }, [writeLeaderHeartbeat]);
-
-  const becomeFollower = useCallback(() => {
-    if (!isLeader.current && !leaderState) return;
-    isLeader.current = false;
-    setLeaderState(false);
-    clearGameTimers();
-  }, [clearGameTimers, leaderState]);
-
+  // Audio init
   useEffect(() => {
     bgMusic.current = new Audio("https://www.tbgameloader.com/800/v37/home/static/media/bg_music.eed9358.mp3");
     bgMusic.current.loop = true;
@@ -257,73 +119,135 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener("click", startMusic);
   }, []);
 
-  const generateCrashPoint = useCallback(() => {
-    const r = Math.random();
-    let cp = r < 0.02 ? 1.0 : parseFloat((1 / (1 - r)).toFixed(2));
-    if (cp > 30) cp = 30;
-    crashPoint.current = cp;
-    crashedRef.current = false;
-    setNextCrashPointState(cp);
-    return cp;
-  }, []);
-
-  const startWaitingCountdown = useCallback(() => {
-    const initialCountdown = 5;
-    waitingCountdownRef.current = initialCountdown;
-    setWaitingCountdown(initialCountdown);
-
-    if (waitingTimerRef.current) {
-      clearInterval(waitingTimerRef.current);
-    }
-
-    const start = Date.now();
-    waitingTimerRef.current = setInterval(() => {
-      const elapsed = (Date.now() - start) / 1000;
-      const remaining = Math.max(0, initialCountdown - elapsed);
-      const nextCountdown = parseFloat(remaining.toFixed(1));
-
-      waitingCountdownRef.current = nextCountdown;
-      setWaitingCountdown(nextCountdown);
-
-      if (isLeader.current) {
-        broadcastState({
-          phase: "waiting",
-          multiplier: 1.0,
-          crashPoint: crashPoint.current,
-          history: crashHistoryRef.current,
-          waitingCountdown: nextCountdown,
-        });
-      }
-
-      if (remaining <= 0 && waitingTimerRef.current) {
-        clearInterval(waitingTimerRef.current);
-        waitingTimerRef.current = null;
-      }
-    }, 100);
-  }, [broadcastState]);
-
-  // Persist balance locally
+  // Persist balance
   useEffect(() => {
-    try {
-      localStorage.setItem("aviator_balance", String(balance));
-    } catch {}
+    try { localStorage.setItem("aviator_balance", String(balance)); } catch {}
   }, [balance]);
 
-  const roundIdRef = useRef<string>("");
+  const applyRound = useCallback((row: RoundRow, prevPhase: GamePhase | null) => {
+    currentRoundRef.current = row;
+    roundIdRef.current = `r_${row.id}`;
+    setNextCrashPoint(Number(row.crash_point));
+    setPhase(row.phase);
 
-  // Generate a new round id at the start of each round (when phase becomes waiting)
-  useEffect(() => {
-    if (phase === "waiting") {
-      roundIdRef.current = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    if (row.phase === "crashed") {
+      setMultiplier(Number(row.crash_point));
+      if (prevPhase !== "crashed") {
+        sndCrash.current?.play().catch(() => {});
+        // clear bets on crash
+        setBets([null, null]);
+      }
+    } else if (row.phase === "waiting") {
+      setMultiplier(1.0);
     }
-  }, [phase]);
+  }, []);
 
-  // POST to the platform callback URL with the standard JSON contract
+  // Fetch initial round + history, subscribe to realtime
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInitial = async () => {
+      // Trigger a tick so engine starts if no rows exist
+      try { await supabase.rpc("tick_game" as never); } catch {}
+
+      const { data: latest } = await supabase
+        .from("game_rounds")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!cancelled && latest) {
+        applyRound(latest as RoundRow, null);
+      }
+
+      const { data: hist } = await supabase
+        .from("game_rounds")
+        .select("crash_point")
+        .eq("phase", "crashed")
+        .order("id", { ascending: false })
+        .limit(20);
+
+      if (!cancelled && hist) {
+        setCrashHistory(hist.map((r: any) => Number(r.crash_point)));
+      }
+    };
+
+    loadInitial();
+
+    const channel = supabase
+      .channel("game_rounds_changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "game_rounds" },
+        (payload) => {
+          const row = payload.new as RoundRow;
+          applyRound(row, currentRoundRef.current?.phase ?? null);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "game_rounds" },
+        (payload) => {
+          const row = payload.new as RoundRow;
+          const prev = currentRoundRef.current?.phase ?? null;
+          applyRound(row, prev);
+          if (row.phase === "crashed" && prev !== "crashed") {
+            setCrashHistory((h) => [Number(row.crash_point), ...h].slice(0, 20));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [applyRound]);
+
+  // Local ticker for smooth multiplier + countdown + lazy engine kick
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const r = currentRoundRef.current;
+      if (!r) {
+        // kick engine
+        supabase.rpc("tick_game" as never).catch(() => {});
+        return;
+      }
+      const now = Date.now();
+
+      if (r.phase === "waiting") {
+        const wu = new Date(r.waiting_until).getTime();
+        const remaining = Math.max(0, (wu - now) / 1000);
+        setWaitingCountdown(parseFloat(remaining.toFixed(1)));
+        if (remaining <= 0) {
+          supabase.rpc("tick_game" as never).catch(() => {});
+        }
+      } else if (r.phase === "flying" && r.started_at) {
+        const startMs = new Date(r.started_at).getTime();
+        const elapsed = (now - startMs) / 1000;
+        let m = computeMultiplier(elapsed);
+        if (m >= r.crash_point) {
+          m = r.crash_point;
+          supabase.rpc("tick_game" as never).catch(() => {});
+        }
+        setMultiplier(parseFloat(m.toFixed(2)));
+        setWaitingCountdown(0);
+      } else if (r.phase === "crashed" && r.crashed_at) {
+        const since = (now - new Date(r.crashed_at).getTime()) / 1000;
+        if (since >= 5) {
+          supabase.rpc("tick_game" as never).catch(() => {});
+        }
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Callback POST
   const callCallback = useCallback(
     async (params: { betAmount: number; winAmount: number }) => {
       const { callbackUrl, memberAccount } = sessionRef.current;
       if (!callbackUrl || !memberAccount) return null;
-
       const payload = {
         member_account: memberAccount,
         game_uid: "aviator",
@@ -333,7 +257,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         game_round: roundIdRef.current || `r_${Date.now()}`,
         currency_code: "BDT",
       };
-
       try {
         const res = await fetch(callbackUrl, {
           method: "POST",
@@ -353,7 +276,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
-  // On mount: if we have a session, fetch live balance from the server (bet=0, win=0)
   useEffect(() => {
     const { callbackUrl, memberAccount } = sessionRef.current;
     if (callbackUrl && memberAccount) {
@@ -361,219 +283,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-
-  const startNewRound = useCallback(() => {
-    clearGameTimers();
-
-    const cp = generateCrashPoint();
-    setMultiplier(1.0);
-    setPhase("waiting");
-    waitingCountdownRef.current = 5;
-    startWaitingCountdown();
-    broadcastState({
-      phase: "waiting",
-      multiplier: 1.0,
-      crashPoint: cp,
-      history: crashHistoryRef.current,
-      waitingCountdown: 5,
-    });
-
-    takeoffTimeoutRef.current = setTimeout(() => {
-      if (!isLeader.current || phaseRef.current !== "waiting") return;
-      setPhase("flying");
-    }, 5000);
-  }, [broadcastState, clearGameTimers, generateCrashPoint, startWaitingCountdown]);
-
-  useEffect(() => {
-    const channel = new BroadcastChannel(CHANNEL_NAME);
-    channelRef.current = channel;
-
-    const existingLeader = readLeaderState();
-    const leaderExpired = !existingLeader || Date.now() - existingLeader.updatedAt > LEADER_TIMEOUT_MS;
-
-    if (leaderExpired || existingLeader.id === tabId.current) {
-      claimLeadership();
-    } else {
-      becomeFollower();
-      applySyncedState(readSyncedState());
-      channel.postMessage({ type: "request_state" });
-    }
-
-    channel.onmessage = (event) => {
-      const data = event.data;
-      if (!data?.type) return;
-
-      if (data.type === "request_state") {
-        if (isLeader.current) {
-          channel.postMessage({ type: "state", ...createSyncedState() });
-        }
-        return;
-      }
-
-      if (data.type === "state") {
-        if (!isLeader.current) {
-          applySyncedState(data as Partial<SyncedGameState>);
-        }
-        return;
-      }
-
-      if (data.type === "leader_lost") {
-        const latestLeader = readLeaderState();
-        if (!latestLeader) {
-          claimLeadership();
-        }
-      }
-    };
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === STATE_KEY && event.newValue && !isLeader.current) {
-        try {
-          applySyncedState(JSON.parse(event.newValue) as SyncedGameState);
-        } catch {}
-      }
-
-      if (event.key === LEADER_KEY) {
-        if (!event.newValue) {
-          if (!isLeader.current) {
-            claimLeadership();
-          }
-          return;
-        }
-
-        try {
-          const nextLeader = JSON.parse(event.newValue) as LeaderState;
-          if (nextLeader.id !== tabId.current && isLeader.current) {
-            becomeFollower();
-          }
-        } catch {}
-      }
-    };
-
-    const cleanup = () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("beforeunload", cleanup);
-
-      if (leaderHeartbeatRef.current) {
-        clearInterval(leaderHeartbeatRef.current);
-        leaderHeartbeatRef.current = null;
-      }
-
-      if (isLeader.current) {
-        clearGameTimers();
-        localStorage.removeItem(LEADER_KEY);
-        try {
-          channel.postMessage({ type: "leader_lost" });
-        } catch {}
-      }
-
-      channel.close();
-    };
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("beforeunload", cleanup);
-
-    return cleanup;
-  }, [applySyncedState, becomeFollower, claimLeadership, clearGameTimers, createSyncedState, readLeaderState, readSyncedState]);
-
-  useEffect(() => {
-    if (!leaderState) {
-      if (leaderHeartbeatRef.current) {
-        clearInterval(leaderHeartbeatRef.current);
-        leaderHeartbeatRef.current = null;
-      }
-      return;
-    }
-
-    writeLeaderHeartbeat();
-    leaderHeartbeatRef.current = setInterval(writeLeaderHeartbeat, 1000);
-
-    return () => {
-      if (leaderHeartbeatRef.current) {
-        clearInterval(leaderHeartbeatRef.current);
-        leaderHeartbeatRef.current = null;
-      }
-    };
-  }, [leaderState, writeLeaderHeartbeat]);
-
-  useEffect(() => {
-    if (!leaderState) return;
-    startNewRound();
-    return clearGameTimers;
-  }, [leaderState, startNewRound, clearGameTimers]);
-
-  useEffect(() => {
-    if (phase !== "flying" || !leaderState) return;
-
-    broadcastState({
-      phase: "flying",
-      multiplier: 1.0,
-      crashPoint: crashPoint.current,
-      history: crashHistoryRef.current,
-      waitingCountdown: 0,
-    });
-
-    flyingIntervalRef.current = setInterval(() => {
-      if (crashedRef.current || !isLeader.current) return;
-
-      setMultiplier((prev) => {
-        if (crashedRef.current || !isLeader.current) return prev;
-
-        const speed = prev < 2 ? 0.02 : prev < 5 ? 0.04 : 0.08;
-        const next = parseFloat((prev + speed + Math.random() * speed).toFixed(2));
-
-        if (next >= crashPoint.current) {
-          crashedRef.current = true;
-
-          if (flyingIntervalRef.current) {
-            clearInterval(flyingIntervalRef.current);
-            flyingIntervalRef.current = null;
-          }
-
-          const crashAt = crashPoint.current;
-          const newHistory = [crashAt, ...crashHistoryRef.current].slice(0, 20);
-
-          setPhase("crashed");
-          setBets([null, null]);
-          setCrashHistory(newHistory);
-          sndCrash.current?.play().catch(() => {});
-
-          broadcastState({
-            phase: "crashed",
-            multiplier: crashAt,
-            crashPoint: crashAt,
-            history: newHistory,
-            waitingCountdown: 0,
-          });
-
-          restartTimeoutRef.current = setTimeout(() => {
-            if (isLeader.current) {
-              startNewRound();
-            }
-          }, 5000);
-
-          return crashAt;
-        }
-
-        broadcastState({
-          phase: "flying",
-          multiplier: next,
-          crashPoint: crashPoint.current,
-          history: crashHistoryRef.current,
-          waitingCountdown: 0,
-        });
-
-        return next;
-      });
-    }, 80);
-
-    return () => {
-      if (flyingIntervalRef.current) {
-        clearInterval(flyingIntervalRef.current);
-        flyingIntervalRef.current = null;
-      }
-    };
-  }, [phase, leaderState, broadcastState, startNewRound]);
 
   const placeBet = useCallback((panelIndex: 0 | 1, amount: number) => {
     if (balanceRef.current < amount) return;
@@ -583,7 +292,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       next[panelIndex] = { amount, cashedOut: false, cashoutMultiplier: null };
       return next;
     });
-    // Notify backend: deduct bet
     callCallback({ betAmount: amount, winAmount: 0 });
   }, [callCallback]);
 
@@ -594,7 +302,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const winnings = parseFloat((bet.amount * multiplierRef.current).toFixed(2));
       setBalance((b) => b + winnings);
       sndWin.current?.play().catch(() => {});
-      // Notify backend: credit win
       callCallback({ betAmount: 0, winAmount: winnings });
       const next = [...prev] as [Bet | null, Bet | null];
       next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
@@ -603,7 +310,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [callCallback]);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint: nextCrashPointState, waitingCountdown }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown }}>
       {children}
     </GameContext.Provider>
   );
