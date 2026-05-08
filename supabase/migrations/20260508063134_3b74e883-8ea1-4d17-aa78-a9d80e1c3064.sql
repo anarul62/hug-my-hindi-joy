@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.tick_game() FROM anon, authenticated, public;
