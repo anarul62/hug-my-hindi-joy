@@ -1,42 +1,60 @@
+## Goal
 
+1. Game aur /hack ki history aur next-crash prediction sab users/devices par same dikhe (cross-device global sync).
+2. Game page ke top history row ka background hatao (transparent) — already mostly done, verify.
 
-## Plan: Match Reference Website Exactly
+## Approach
 
-Based on comparing your current app with the reference site (hug-me-hindi.lovable.app), I can see they are already very close. Here are the specific differences to fix:
+### 1. Cross-device sync via Lovable Cloud
 
-### 1. BetPanel - Match Exact Layout
-The reference shows:
-- **Left side**: Bet/Auto tabs on top, then amount row with minus/plus buttons, then 4 preset buttons (100, 200, 500, 1000) in a 2x2 grid
-- **Right side**: Large green "Bet (Next Round)" button showing the bet amount and "BDT" label underneath
-- Your current BetPanel has the BET button but is missing the "Bet (Next Round)" text with amount and "BDT" label inside the green button
+Currently game state sirf same browser ke tabs me sync hota hai (BroadcastChannel + localStorage). Sab users ke liye same crash dikhane ke liye backend chahiye — Lovable Cloud enable karna hoga.
 
-**Changes to `src/components/BetPanel.tsx`:**
-- Update the green BET button to show "Bet (Next Round)" as small text on top, the bet amount in large text, and "BDT" below
-- Adjust amount input to show minus button on left, amount centered, plus button on right (horizontal layout matching reference)
-- Remove the ₹ symbol from presets, use comma-formatted numbers only
+**Architecture:**
+- Ek Supabase Edge Function `game-engine` jo authoritative game loop chalayegi: round generate karo, crash point decide karo, multiplier tick karo, history maintain karo.
+- Ek `game_rounds` table:
+  - `id` (uuid)
+  - `phase` ('waiting' | 'flying' | 'crashed')
+  - `crash_point` (numeric)
+  - `started_at`, `crashed_at` (timestamptz)
+  - `multiplier` (numeric, current — updated by engine)
+  - `waiting_until` (timestamptz)
+- RLS: read-only for `anon`/`authenticated`, write only via service role (edge function).
+- Frontend subscribes via Supabase Realtime to `game_rounds` table.
+- `GameContext` ko refactor karo: leader/follower BroadcastChannel logic hatao, sirf realtime se state read karo. Local timer sirf smooth multiplier interpolation ke liye use karo (server timestamps se calculate).
+- Engine trigger: edge function ko ek scheduled trigger ya self-loop chahiye. Simplest: cron (`pg_cron`) jo har 1s pe `tick` function call kare, ya client ke pehle request pe lazy-start kare. Recommended: `pg_cron` har second `game_engine_tick()` SQL function chalaye jo phases manage kare deterministically.
+- Hack page same `game_rounds` table read karega — automatically same prediction (crash_point) aur same history dikhayega.
 
-### 2. BetHistory - Add "My Bets" Tab Content
-The reference has "All Bets", "Previous", "Top" tabs. Your current code already matches this.
+**History:**
+- Last 20 crashed rounds ek view ya direct query se aayenge (`order by crashed_at desc limit 20`).
+- Game aur Hack dono yahi list use karenge → guaranteed same.
 
-- Fix the lowercase name format to use first letter + "***" + last letter pattern (already done)
-- Ensure green left-border highlight on winning rows (already done)
-- The bet list columns: avatar, name, amount, multiplier (purple), cashout amount
+### 2. Game page top history background
 
-### 3. MultiplierHistory Colors
-The reference shows multipliers color-coded:
-- Teal/cyan for values < 2x
-- Purple/magenta for values >= 2x
-- This already matches your code
+`MultiplierHistory.tsx` me already `bg-transparent` hai. Parent (`Index.tsx`) me bhi koi extra bg nahi. Verify karke confirm — agar koi remnant hai to remove.
 
-### 4. Game Area - Minor Refinements
-- The reference shows a dark background with subtle radial rays and a red plane/curve -- already close
-- Ensure the "Flew away!" text matches the reference styling
+### 3. Bet/Cashout flow
 
-### Summary of File Changes
+Bets local hi rahenge (per-user). Cashout multiplier server-driven multiplier se hoga. Callback POST ko same rakhenge.
 
-| File | Change |
-|------|--------|
-| `src/components/BetPanel.tsx` | Update green button to show "Bet (Next Round)" + amount + "BDT"; fix amount input layout with centered amount |
+## Steps
 
-The main visible difference is the **BET button content** -- it should display "Bet (Next Round)", the current bet amount, and "BDT" instead of just "BET".
+1. Lovable Cloud enable karo.
+2. Migration: `game_rounds` table + RLS + `pg_cron` extension + `game_engine_tick()` plpgsql function + cron schedule (every 1 second).
+3. Refactor `src/contexts/GameContext.tsx`:
+   - Remove BroadcastChannel/leader logic.
+   - Subscribe to `game_rounds` realtime + initial fetch.
+   - Compute `multiplier` client-side via interpolation between `started_at` and `now()` for smooth UI; snap to server `crash_point` on crash.
+   - `crashHistory` from `game_rounds` where phase='crashed' order desc limit 20.
+4. Verify `MultiplierHistory.tsx` background transparent (already done).
+5. Test: open game and /hack in two different browsers — same crash, same history.
 
+## Technical notes
+
+- Edge function not strictly needed if `pg_cron` + plpgsql handles tick. Simpler.
+- Tick logic: if current row phase='waiting' and now>=waiting_until → set phase='flying', started_at=now. If phase='flying' and computed_mult >= crash_point → set phase='crashed', crashed_at=now, schedule next round 5s later. If phase='crashed' and now-crashed_at>=5s → insert new row with new crash_point and waiting_until=now+5s.
+- Multiplier formula client-side: `mult = 1 + (elapsed_seconds * growth)` matching old speed curve, capped at server crash_point when phase becomes crashed.
+
+## Out of scope
+
+- Auth (game stays anonymous, balance per-browser via URL token).
+- Per-user bet history sync.
