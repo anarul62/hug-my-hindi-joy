@@ -14,13 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_rounds: {
+        Row: {
+          crash_point: number
+          crashed_at: string | null
+          created_at: string
+          id: number
+          phase: string
+          started_at: string | null
+          waiting_until: string
+        }
+        Insert: {
+          crash_point: number
+          crashed_at?: string | null
+          created_at?: string
+          id?: number
+          phase: string
+          started_at?: string | null
+          waiting_until: string
+        }
+        Update: {
+          crash_point?: number
+          crashed_at?: string | null
+          created_at?: string
+          id?: number
+          phase?: string
+          started_at?: string | null
+          waiting_until?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      tick_game: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
