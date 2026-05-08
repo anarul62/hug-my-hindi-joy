@@ -211,7 +211,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const r = currentRoundRef.current;
       if (!r) {
         // kick engine
-        supabase.rpc("tick_game" as never).catch(() => {});
+        supabase.rpc("tick_game" as never).then(() => {}, () => {});
         return;
       }
       const now = Date.now();
@@ -221,7 +221,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         const remaining = Math.max(0, (wu - now) / 1000);
         setWaitingCountdown(parseFloat(remaining.toFixed(1)));
         if (remaining <= 0) {
-          supabase.rpc("tick_game" as never).catch(() => {});
+          supabase.rpc("tick_game" as never).then(() => {}, () => {});
         }
       } else if (r.phase === "flying" && r.started_at) {
         const startMs = new Date(r.started_at).getTime();
@@ -229,14 +229,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         let m = computeMultiplier(elapsed);
         if (m >= r.crash_point) {
           m = r.crash_point;
-          supabase.rpc("tick_game" as never).catch(() => {});
+          supabase.rpc("tick_game" as never).then(() => {}, () => {});
         }
         setMultiplier(parseFloat(m.toFixed(2)));
         setWaitingCountdown(0);
       } else if (r.phase === "crashed" && r.crashed_at) {
         const since = (now - new Date(r.crashed_at).getTime()) / 1000;
         if (since >= 5) {
-          supabase.rpc("tick_game" as never).catch(() => {});
+          supabase.rpc("tick_game" as never).then(() => {}, () => {});
         }
       }
     }, 80);
