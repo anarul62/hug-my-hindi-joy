@@ -97,7 +97,7 @@ const AdminPanel = () => {
         <div className="bg-card rounded-xl p-8 w-full max-w-md shadow-2xl border border-border">
           <h1 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
             <Lock className="w-5 h-5" style={{ color: "rgb(50, 180, 80)" }} />
-            🔐 Admin Access
+            🔐 AgentX Access
           </h1>
           <label className="block text-sm text-muted-foreground mb-2">API Key</label>
           <input
@@ -109,7 +109,7 @@ const AdminPanel = () => {
           />
           {error && <p className="text-destructive text-xs mb-3">Invalid API key</p>}
           <button onClick={handleUnlock} className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-lg transition-opacity mt-3">
-            Unlock Admin Panel
+            Unlock AgentX
           </button>
           <Link to="/" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground mt-4 text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Game
@@ -125,7 +125,7 @@ const AdminPanel = () => {
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <Lock className="w-5 h-5" style={{ color: "rgb(50, 180, 80)" }} />
-          <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+          <h1 className="text-xl font-bold text-white">AgentX</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/hack" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "rgba(220, 40, 40, 0.8)", color: "white" }}>
@@ -138,16 +138,18 @@ const AdminPanel = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex mx-4 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+      <div className="flex flex-wrap mx-4 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
         {[
           { id: "game" as const, label: "Game", icon: <Settings className="w-4 h-4" /> },
           { id: "api" as const, label: "API", icon: <Globe className="w-4 h-4" /> },
-          { id: "setup" as const, label: "Setup Files", icon: <FolderOpen className="w-4 h-4" /> },
+          { id: "keys" as const, label: "Keys", icon: <Key className="w-4 h-4" /> },
+          { id: "ips" as const, label: "IPs", icon: <Ban className="w-4 h-4" /> },
+          { id: "setup" as const, label: "Setup", icon: <FolderOpen className="w-4 h-4" /> },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors"
+            className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors"
             style={{
               background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
               color: activeTab === tab.id ? "white" : "rgba(255,255,255,0.4)",
