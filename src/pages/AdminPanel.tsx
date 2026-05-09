@@ -1,15 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Lock, Settings, Globe, FolderOpen, ArrowLeft, Copy, Download } from "lucide-react";
+import { Lock, Settings, Globe, FolderOpen, ArrowLeft, Copy, Download, Key, Ban, Trash2, Plus, Power } from "lucide-react";
 import { useGame } from "@/contexts/GameContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const API_KEY = "AVIATOR-ADMIN-2024";
+
+type HackKey = { id: string; key: string; label: string | null; active: boolean; created_at: string };
+type BlockedIp = { id: string; ip: string; reason: string | null; created_at: string };
 
 const AdminPanel = () => {
   const [apiKey, setApiKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState<"game" | "api" | "setup">("game");
+  const [activeTab, setActiveTab] = useState<"game" | "api" | "keys" | "ips" | "setup">("game");
+
+  // Keys + IPs state
+  const [keys, setKeys] = useState<HackKey[]>([]);
+  const [ips, setIps] = useState<BlockedIp[]>([]);
+  const [newKeyLabel, setNewKeyLabel] = useState("");
+  const [newKeyValue, setNewKeyValue] = useState("");
+  const [newIp, setNewIp] = useState("");
+  const [newIpReason, setNewIpReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const refreshKeys = useCallback(async () => {
+    const { data } = await supabase.from("hack_keys").select("*").order("created_at", { ascending: false });
+    setKeys((data ?? []) as HackKey[]);
+  }, []);
+  const refreshIps = useCallback(async () => {
+    const { data } = await supabase.from("blocked_ips").select("*").order("created_at", { ascending: false });
+    setIps((data ?? []) as BlockedIp[]);
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    refreshKeys();
+    refreshIps();
+  }, [unlocked, refreshKeys, refreshIps]);
+
+  const callAdmin = async (op: string, payload: any = {}) => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("agentx-admin", {
+        body: { op, payload },
+        headers: { "x-admin-key": API_KEY },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+      return (data as any)?.data;
+    } catch (e: any) {
+      toast.error(e.message || "Operation failed");
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Game Control state
   const { phase, multiplier, nextCrashPoint, waitingCountdown, crashHistory } = useGame();
@@ -51,7 +97,7 @@ const AdminPanel = () => {
         <div className="bg-card rounded-xl p-8 w-full max-w-md shadow-2xl border border-border">
           <h1 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
             <Lock className="w-5 h-5" style={{ color: "rgb(50, 180, 80)" }} />
-            🔐 Admin Access
+            🔐 AgentX Access
           </h1>
           <label className="block text-sm text-muted-foreground mb-2">API Key</label>
           <input
@@ -63,7 +109,7 @@ const AdminPanel = () => {
           />
           {error && <p className="text-destructive text-xs mb-3">Invalid API key</p>}
           <button onClick={handleUnlock} className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-lg transition-opacity mt-3">
-            Unlock Admin Panel
+            Unlock AgentX
           </button>
           <Link to="/" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground mt-4 text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Game
@@ -79,7 +125,7 @@ const AdminPanel = () => {
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <Lock className="w-5 h-5" style={{ color: "rgb(50, 180, 80)" }} />
-          <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+          <h1 className="text-xl font-bold text-white">AgentX</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/hack" className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "rgba(220, 40, 40, 0.8)", color: "white" }}>
@@ -92,16 +138,18 @@ const AdminPanel = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex mx-4 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+      <div className="flex flex-wrap mx-4 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
         {[
           { id: "game" as const, label: "Game", icon: <Settings className="w-4 h-4" /> },
           { id: "api" as const, label: "API", icon: <Globe className="w-4 h-4" /> },
-          { id: "setup" as const, label: "Setup Files", icon: <FolderOpen className="w-4 h-4" /> },
+          { id: "keys" as const, label: "Keys", icon: <Key className="w-4 h-4" /> },
+          { id: "ips" as const, label: "IPs", icon: <Ban className="w-4 h-4" /> },
+          { id: "setup" as const, label: "Setup", icon: <FolderOpen className="w-4 h-4" /> },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors"
+            className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors"
             style={{
               background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
               color: activeTab === tab.id ? "white" : "rgba(255,255,255,0.4)",
@@ -345,6 +393,129 @@ const AdminPanel = () => {
         )}
 
         {/* ═══════════════ SETUP FILES TAB ═══════════════ */}
+        {/* ═══════════════ KEYS TAB ═══════════════ */}
+        {activeTab === "keys" && (
+          <div className="space-y-4">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h2 className="text-base font-bold text-white flex items-center gap-2"><Key className="w-4 h-4" /> Generate Hack Key</h2>
+              <input
+                type="text"
+                placeholder="Custom key (optional, auto if blank)"
+                value={newKeyValue}
+                onChange={(e) => setNewKeyValue(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <input
+                type="text"
+                placeholder="Label (e.g. user name)"
+                value={newKeyLabel}
+                onChange={(e) => setNewKeyLabel(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  await callAdmin("create_key", { key: newKeyValue || undefined, label: newKeyLabel || null });
+                  setNewKeyValue(""); setNewKeyLabel("");
+                  toast.success("Key created");
+                  refreshKeys();
+                }}
+                className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                style={{ background: "rgb(50, 180, 80)", color: "white" }}
+              >
+                <Plus className="w-4 h-4" /> Generate Key
+              </button>
+            </div>
+
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h3 className="text-sm font-bold text-white mb-2">Active Keys ({keys.length})</h3>
+              {keys.length === 0 && <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>No keys yet.</p>}
+              {keys.map((k) => (
+                <div key={k.id} className="flex items-center gap-2 rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-mono font-bold text-white truncate">{k.key}</p>
+                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {k.label || "—"} · {k.active ? "✅ Active" : "⛔ Disabled"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(k.key); toast.success("Copied"); }}
+                    className="p-1.5 rounded" style={{ background: "rgba(255,255,255,0.08)" }}
+                  ><Copy className="w-3.5 h-3.5 text-white" /></button>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("toggle_key", { id: k.id, active: !k.active }); refreshKeys(); }}
+                    className="p-1.5 rounded" style={{ background: k.active ? "rgba(220,180,0,0.2)" : "rgba(50,180,80,0.2)" }}
+                  ><Power className="w-3.5 h-3.5" style={{ color: k.active ? "rgb(220,180,0)" : "rgb(50,180,80)" }} /></button>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("delete_key", { id: k.id }); refreshKeys(); toast.success("Deleted"); }}
+                    className="p-1.5 rounded" style={{ background: "rgba(220,50,50,0.2)" }}
+                  ><Trash2 className="w-3.5 h-3.5" style={{ color: "rgb(220,50,50)" }} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ IPS TAB ═══════════════ */}
+        {activeTab === "ips" && (
+          <div className="space-y-4">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h2 className="text-base font-bold text-white flex items-center gap-2"><Ban className="w-4 h-4" /> Block IP Address</h2>
+              <input
+                type="text"
+                placeholder="IP address (e.g. 1.2.3.4)"
+                value={newIp}
+                onChange={(e) => setNewIp(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <input
+                type="text"
+                placeholder="Reason (optional)"
+                value={newIpReason}
+                onChange={(e) => setNewIpReason(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <button
+                disabled={busy || !newIp}
+                onClick={async () => {
+                  await callAdmin("block_ip", { ip: newIp.trim(), reason: newIpReason || null });
+                  setNewIp(""); setNewIpReason("");
+                  toast.success("IP blocked");
+                  refreshIps();
+                }}
+                className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                style={{ background: "rgb(220, 50, 50)", color: "white" }}
+              >
+                <Ban className="w-4 h-4" /> Block IP
+              </button>
+            </div>
+
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h3 className="text-sm font-bold text-white mb-2">Blocked IPs ({ips.length})</h3>
+              {ips.length === 0 && <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>No blocked IPs.</p>}
+              {ips.map((ip) => (
+                <div key={ip.id} className="flex items-center gap-2 rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-mono font-bold text-white truncate">{ip.ip}</p>
+                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>{ip.reason || "—"}</p>
+                  </div>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("unblock_ip", { id: ip.id }); refreshIps(); toast.success("Unblocked"); }}
+                    className="px-3 py-1.5 rounded text-xs font-bold" style={{ background: "rgb(50,180,80)", color: "white" }}
+                  >Unblock</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab === "setup" && (
           <div className="space-y-4">
             {/* Header Card */}
