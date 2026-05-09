@@ -393,6 +393,129 @@ const AdminPanel = () => {
         )}
 
         {/* ═══════════════ SETUP FILES TAB ═══════════════ */}
+        {/* ═══════════════ KEYS TAB ═══════════════ */}
+        {activeTab === "keys" && (
+          <div className="space-y-4">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h2 className="text-base font-bold text-white flex items-center gap-2"><Key className="w-4 h-4" /> Generate Hack Key</h2>
+              <input
+                type="text"
+                placeholder="Custom key (optional, auto if blank)"
+                value={newKeyValue}
+                onChange={(e) => setNewKeyValue(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <input
+                type="text"
+                placeholder="Label (e.g. user name)"
+                value={newKeyLabel}
+                onChange={(e) => setNewKeyLabel(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  await callAdmin("create_key", { key: newKeyValue || undefined, label: newKeyLabel || null });
+                  setNewKeyValue(""); setNewKeyLabel("");
+                  toast.success("Key created");
+                  refreshKeys();
+                }}
+                className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                style={{ background: "rgb(50, 180, 80)", color: "white" }}
+              >
+                <Plus className="w-4 h-4" /> Generate Key
+              </button>
+            </div>
+
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h3 className="text-sm font-bold text-white mb-2">Active Keys ({keys.length})</h3>
+              {keys.length === 0 && <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>No keys yet.</p>}
+              {keys.map((k) => (
+                <div key={k.id} className="flex items-center gap-2 rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-mono font-bold text-white truncate">{k.key}</p>
+                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {k.label || "—"} · {k.active ? "✅ Active" : "⛔ Disabled"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(k.key); toast.success("Copied"); }}
+                    className="p-1.5 rounded" style={{ background: "rgba(255,255,255,0.08)" }}
+                  ><Copy className="w-3.5 h-3.5 text-white" /></button>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("toggle_key", { id: k.id, active: !k.active }); refreshKeys(); }}
+                    className="p-1.5 rounded" style={{ background: k.active ? "rgba(220,180,0,0.2)" : "rgba(50,180,80,0.2)" }}
+                  ><Power className="w-3.5 h-3.5" style={{ color: k.active ? "rgb(220,180,0)" : "rgb(50,180,80)" }} /></button>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("delete_key", { id: k.id }); refreshKeys(); toast.success("Deleted"); }}
+                    className="p-1.5 rounded" style={{ background: "rgba(220,50,50,0.2)" }}
+                  ><Trash2 className="w-3.5 h-3.5" style={{ color: "rgb(220,50,50)" }} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ IPS TAB ═══════════════ */}
+        {activeTab === "ips" && (
+          <div className="space-y-4">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h2 className="text-base font-bold text-white flex items-center gap-2"><Ban className="w-4 h-4" /> Block IP Address</h2>
+              <input
+                type="text"
+                placeholder="IP address (e.g. 1.2.3.4)"
+                value={newIp}
+                onChange={(e) => setNewIp(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <input
+                type="text"
+                placeholder="Reason (optional)"
+                value={newIpReason}
+                onChange={(e) => setNewIpReason(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+              />
+              <button
+                disabled={busy || !newIp}
+                onClick={async () => {
+                  await callAdmin("block_ip", { ip: newIp.trim(), reason: newIpReason || null });
+                  setNewIp(""); setNewIpReason("");
+                  toast.success("IP blocked");
+                  refreshIps();
+                }}
+                className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                style={{ background: "rgb(220, 50, 50)", color: "white" }}
+              >
+                <Ban className="w-4 h-4" /> Block IP
+              </button>
+            </div>
+
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <h3 className="text-sm font-bold text-white mb-2">Blocked IPs ({ips.length})</h3>
+              {ips.length === 0 && <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>No blocked IPs.</p>}
+              {ips.map((ip) => (
+                <div key={ip.id} className="flex items-center gap-2 rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-mono font-bold text-white truncate">{ip.ip}</p>
+                    <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>{ip.reason || "—"}</p>
+                  </div>
+                  <button
+                    disabled={busy}
+                    onClick={async () => { await callAdmin("unblock_ip", { id: ip.id }); refreshIps(); toast.success("Unblocked"); }}
+                    className="px-3 py-1.5 rounded text-xs font-bold" style={{ background: "rgb(50,180,80)", color: "white" }}
+                  >Unblock</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab === "setup" && (
           <div className="space-y-4">
             {/* Header Card */}
