@@ -1,15 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Lock, Settings, Globe, FolderOpen, ArrowLeft, Copy, Download } from "lucide-react";
+import { Lock, Settings, Globe, FolderOpen, ArrowLeft, Copy, Download, Key, Ban, Trash2, Plus, Power } from "lucide-react";
 import { useGame } from "@/contexts/GameContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const API_KEY = "AVIATOR-ADMIN-2024";
+
+type HackKey = { id: string; key: string; label: string | null; active: boolean; created_at: string };
+type BlockedIp = { id: string; ip: string; reason: string | null; created_at: string };
 
 const AdminPanel = () => {
   const [apiKey, setApiKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState<"game" | "api" | "setup">("game");
+  const [activeTab, setActiveTab] = useState<"game" | "api" | "keys" | "ips" | "setup">("game");
+
+  // Keys + IPs state
+  const [keys, setKeys] = useState<HackKey[]>([]);
+  const [ips, setIps] = useState<BlockedIp[]>([]);
+  const [newKeyLabel, setNewKeyLabel] = useState("");
+  const [newKeyValue, setNewKeyValue] = useState("");
+  const [newIp, setNewIp] = useState("");
+  const [newIpReason, setNewIpReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const refreshKeys = useCallback(async () => {
+    const { data } = await supabase.from("hack_keys").select("*").order("created_at", { ascending: false });
+    setKeys((data ?? []) as HackKey[]);
+  }, []);
+  const refreshIps = useCallback(async () => {
+    const { data } = await supabase.from("blocked_ips").select("*").order("created_at", { ascending: false });
+    setIps((data ?? []) as BlockedIp[]);
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    refreshKeys();
+    refreshIps();
+  }, [unlocked, refreshKeys, refreshIps]);
+
+  const callAdmin = async (op: string, payload: any = {}) => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("agentx-admin", {
+        body: { op, payload },
+        headers: { "x-admin-key": API_KEY },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+      return (data as any)?.data;
+    } catch (e: any) {
+      toast.error(e.message || "Operation failed");
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Game Control state
   const { phase, multiplier, nextCrashPoint, waitingCountdown, crashHistory } = useGame();
