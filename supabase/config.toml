@@ -1,1 +1,4 @@
 project_id = "jvxeiinmwwlfheoaomir"
+
+[functions.agentx-admin]
+verify_jwt = false
