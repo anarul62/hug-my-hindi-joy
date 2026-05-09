@@ -10,12 +10,12 @@ const MultiplierHistory = () => {
     <>
       <div className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-hide bg-transparent">
         {crashHistory.map((val, i) => {
-          const color = val >= 2 ? "rgb(147, 51, 234)" : "rgb(20, 184, 166)";
+          const color = val >= 2 ? "rgb(180, 100, 255)" : "rgb(60, 220, 200)";
           return (
             <span
               key={i}
-              className="shrink-0 rounded-full px-2.5 py-[3px] text-[11px] font-bold text-white"
-              style={{ background: color }}
+              className="shrink-0 px-1.5 py-[3px] text-[12px] font-bold"
+              style={{ color, background: "transparent" }}
             >
               {val.toFixed(2)}x
             </span>
