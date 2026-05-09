@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_ips: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       game_rounds: {
         Row: {
           crash_point: number
@@ -41,6 +62,30 @@ export type Database = {
           phase?: string
           started_at?: string | null
           waiting_until?: string
+        }
+        Relationships: []
+      }
+      hack_keys: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          key: string
+          label: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key: string
+          label?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string | null
         }
         Relationships: []
       }
