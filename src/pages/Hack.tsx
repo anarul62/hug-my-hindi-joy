@@ -157,16 +157,17 @@ const Hack = () => {
           type="text"
           placeholder="Enter API key"
           value={apiKey}
-          onChange={(e) => { setApiKey(e.target.value); setError(false); }}
+          onChange={(e) => { setApiKey(e.target.value); setError(""); }}
           className={`w-full bg-muted border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring mb-1 ${error ? "border-destructive" : "border-border"}`}
         />
-        {error && <p className="text-destructive text-xs mb-3">Invalid API key</p>}
+        {error && <p className="text-destructive text-xs mb-3">{error}</p>}
 
         <button
           onClick={handleUnlock}
-          className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-lg transition-opacity mt-3"
+          disabled={checking}
+          className="w-full bg-primary hover:opacity-90 text-primary-foreground font-bold py-3 rounded-lg transition-opacity mt-3 disabled:opacity-50"
         >
-          Unlock Hack
+          {checking ? "Checking..." : "Unlock Hack"}
         </button>
 
         <Link to="/" className="flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground mt-4 text-sm transition-colors">
