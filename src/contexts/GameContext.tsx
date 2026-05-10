@@ -19,6 +19,8 @@ type GameContextType = {
   crashHistory: number[];
   nextCrashPoint: number;
   waitingCountdown: number;
+  lastCashout: { multiplier: number; winAmount: number } | null;
+  dismissCashout: () => void;
 };
 
 type RoundRow = {
@@ -92,6 +94,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [crashHistory, setCrashHistory] = useState<number[]>([]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
   const [nextCrashPoint, setNextCrashPoint] = useState(0);
+  const [lastCashout, setLastCashout] = useState<{ multiplier: number; winAmount: number } | null>(null);
+  const dismissCashout = useCallback(() => setLastCashout(null), []);
 
   const currentRoundRef = useRef<RoundRow | null>(null);
   const roundIdRef = useRef<string>("");
@@ -110,7 +114,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     bgMusic.current.loop = true;
     bgMusic.current.volume = 0.3;
     sndWin.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
-    sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+    sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1704.mp3");
+    if (sndCrash.current) sndCrash.current.volume = 1.0;
     const startMusic = () => {
       bgMusic.current?.play().catch(() => {});
       document.removeEventListener("click", startMusic);
@@ -303,6 +308,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setBalance((b) => b + winnings);
       sndWin.current?.play().catch(() => {});
       callCallback({ betAmount: 0, winAmount: winnings });
+      setLastCashout({ multiplier: multiplierRef.current, winAmount: winnings });
       const next = [...prev] as [Bet | null, Bet | null];
       next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
       return next;
@@ -310,7 +316,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [callCallback]);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout }}>
       {children}
     </GameContext.Provider>
   );
