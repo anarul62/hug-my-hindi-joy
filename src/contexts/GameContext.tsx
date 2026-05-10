@@ -94,6 +94,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [crashHistory, setCrashHistory] = useState<number[]>([]);
   const [waitingCountdown, setWaitingCountdown] = useState(5);
   const [nextCrashPoint, setNextCrashPoint] = useState(0);
+  const [lastCashout, setLastCashout] = useState<{ multiplier: number; winAmount: number } | null>(null);
+  const dismissCashout = useCallback(() => setLastCashout(null), []);
 
   const currentRoundRef = useRef<RoundRow | null>(null);
   const roundIdRef = useRef<string>("");
