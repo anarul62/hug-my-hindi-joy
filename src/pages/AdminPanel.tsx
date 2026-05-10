@@ -255,15 +255,23 @@ const AdminPanel = () => {
 
             {/* Quick Set — circular buttons to set crash range */}
             <div className="rounded-xl p-5 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ QUICK SET — Plane Range</h3>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ QUICK SET — Plane Range (Min–Max)</h3>
               <div className="flex flex-wrap items-center justify-center gap-3">
-                {["1.00", "1.50", "2.00", "5.00", "10.0", "100"].map((v) => {
-                  const active = maxCrash === v;
+                {[
+                  { label: "1-2x", min: "1", max: "2" },
+                  { label: "1-4x", min: "1", max: "4" },
+                  { label: "1-8x", min: "1", max: "8" },
+                  { label: "1-10x", min: "1", max: "10" },
+                  { label: "1-15x", min: "1", max: "15" },
+                  { label: "1-50x", min: "1", max: "50" },
+                  { label: "1-100x", min: "1", max: "100" },
+                ].map(({ label, min, max }) => {
+                  const active = controlMode === "fixed" && minCrash === min && maxCrash === max;
                   return (
                     <button
-                      key={v}
-                      onClick={() => { setMaxCrash(v); setControlMode("fixed"); toast.success(`Max crash set to ${v}x`); }}
-                      className="w-[64px] h-[64px] rounded-full text-sm font-bold transition-all flex items-center justify-center"
+                      key={label}
+                      onClick={() => { setMinCrash(min); setMaxCrash(max); setControlMode("fixed"); toast.success(`Range set to ${label}`); }}
+                      className="w-[68px] h-[68px] rounded-full text-sm font-bold transition-all flex items-center justify-center"
                       style={{
                         border: active ? "2px solid rgb(255, 140, 0)" : "1.5px solid rgba(255, 140, 0, 0.4)",
                         color: active ? "white" : "rgb(255, 140, 0)",
@@ -273,7 +281,7 @@ const AdminPanel = () => {
                         boxShadow: active ? "0 0 14px rgba(255, 140, 0, 0.5)" : "none",
                       }}
                     >
-                      {v}x
+                      {label}
                     </button>
                   );
                 })}
