@@ -1,10 +1,15 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { useGame } from "@/contexts/GameContext";
+import CashOutToast from "./CashOutToast";
 
 const GameArea = () => {
   const { phase, multiplier, waitingCountdown } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const planeImg = useRef<HTMLImageElement | null>(null);
+  const phaseRef = useRef(phase);
+  const multRef = useRef(multiplier);
+  phaseRef.current = phase;
+  multRef.current = multiplier;
 
   useEffect(() => {
     const img = new Image();
@@ -18,66 +23,85 @@ const GameArea = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+    let raf = 0;
+    const draw = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      const t = Date.now() / 1000;
+      const phase = phaseRef.current;
+      const multiplier = multRef.current;
 
-    // Dark rays
-    ctx.save();
-    ctx.translate(w * 0.3, h * 0.8);
-    for (let i = 0; i < 16; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      const angle = (i * Math.PI * 2) / 16;
-      ctx.lineTo(Math.cos(angle) * w, Math.sin(angle) * h);
-      ctx.lineTo(Math.cos(angle + 0.12) * w, Math.sin(angle + 0.12) * h);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(255,255,255,0.02)";
-      ctx.fill();
-    }
-    ctx.restore();
+      ctx.clearRect(0, 0, w, h);
 
-    if (phase === "waiting") {
-      // Show "Waiting..." text only
-      return;
-    }
-
-    // Draw curve
-    const maxMult = 15;
-    const progress = Math.min(1, (multiplier - 1) / (maxMult - 1));
-    const endX = 40 + progress * (w - 80);
-    const endY = h - 40 - progress * (h - 80);
-
-    // Fill under curve
-    ctx.beginPath();
-    ctx.moveTo(20, h - 20);
-    ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
-    ctx.lineTo(endX, h - 20);
-    ctx.lineTo(20, h - 20);
-    const gradient = ctx.createLinearGradient(0, h, endX, endY);
-    gradient.addColorStop(0, "rgba(180, 30, 30, 0.15)");
-    gradient.addColorStop(1, "rgba(180, 30, 30, 0.4)");
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    // Stroke curve
-    ctx.beginPath();
-    ctx.moveTo(20, h - 20);
-    ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
-    ctx.strokeStyle = phase === "crashed" ? "rgb(150, 40, 40)" : "rgb(220, 50, 50)";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Draw plane SVG image
-    if (planeImg.current && phase === "flying") {
+      // Animated rotating rays
       ctx.save();
-      ctx.translate(endX, endY - 5);
-      const angle = Math.atan2(-(endY - (h - 20)), endX - 20) * 0.5;
-      ctx.rotate(-angle * 0.6);
-      ctx.drawImage(planeImg.current, -60, -38, 90, 45);
+      ctx.translate(w * 0.3, h * 0.8);
+      const rot = (t * 0.15) % (Math.PI * 2);
+      ctx.rotate(rot);
+      const pulse = 0.025 + Math.sin(t * 1.2) * 0.015;
+      for (let i = 0; i < 16; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        const angle = (i * Math.PI * 2) / 16;
+        ctx.lineTo(Math.cos(angle) * w, Math.sin(angle) * h);
+        ctx.lineTo(Math.cos(angle + 0.12) * w, Math.sin(angle + 0.12) * h);
+        ctx.closePath();
+        const a = pulse + (i % 2) * 0.015;
+        ctx.fillStyle = `rgba(255,${180 + Math.floor(Math.sin(t + i) * 30)},120,${a})`;
+        ctx.fill();
+      }
       ctx.restore();
-    }
-  }, [multiplier, phase]);
+
+      // Glow under plane area
+      const glowX = w * 0.3;
+      const glowY = h * 0.8;
+      const glowR = 120 + Math.sin(t * 2) * 20;
+      const grad = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, glowR);
+      grad.addColorStop(0, "rgba(255, 90, 40, 0.18)");
+      grad.addColorStop(1, "rgba(255, 90, 40, 0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      if (phase !== "waiting") {
+        const maxMult = 15;
+        const progress = Math.min(1, (multiplier - 1) / (maxMult - 1));
+        const endX = 40 + progress * (w - 80);
+        const endY = h - 40 - progress * (h - 80);
+
+        ctx.beginPath();
+        ctx.moveTo(20, h - 20);
+        ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
+        ctx.lineTo(endX, h - 20);
+        ctx.lineTo(20, h - 20);
+        const gradient = ctx.createLinearGradient(0, h, endX, endY);
+        gradient.addColorStop(0, "rgba(180, 30, 30, 0.15)");
+        gradient.addColorStop(1, "rgba(180, 30, 30, 0.4)");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(20, h - 20);
+        ctx.quadraticCurveTo(endX * 0.5, h - 20, endX, endY);
+        ctx.strokeStyle = phase === "crashed" ? "rgb(150, 40, 40)" : "rgb(220, 50, 50)";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        if (planeImg.current && phase === "flying") {
+          ctx.save();
+          ctx.translate(endX, endY - 5);
+          const angle = Math.atan2(-(endY - (h - 20)), endX - 20) * 0.5;
+          ctx.rotate(-angle * 0.6);
+          const bob = Math.sin(t * 6) * 3;
+          ctx.drawImage(planeImg.current, -85, -55 + bob, 130, 65);
+          ctx.restore();
+        }
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   return (
     <div
@@ -95,10 +119,10 @@ const GameArea = () => {
         width={500}
         height={296}
       />
+      <CashOutToast />
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
         {phase === "waiting" && (
           <div className="flex flex-col items-center justify-center w-full h-full gap-3 px-6">
-            {/* UFC | Aviator */}
             <div className="flex items-center gap-3">
               <span className="text-[28px] font-black italic" style={{ color: "rgb(220, 40, 40)" }}>UFC</span>
               <span className="text-[20px] font-light" style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
@@ -109,7 +133,6 @@ const GameArea = () => {
             </div>
             <p className="text-[14px] font-extrabold tracking-wider text-white">OFFICIAL PARTNERS</p>
 
-            {/* Loading bar */}
             <div className="w-full max-w-[300px] h-[5px] rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div
                 className="h-full rounded-full transition-all duration-100 ease-linear"
@@ -120,7 +143,6 @@ const GameArea = () => {
               />
             </div>
 
-            {/* Second loading line above SPRIBE */}
             <div className="w-full max-w-[260px] h-[4px] rounded-full overflow-hidden -mb-1" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div
                 className="h-full rounded-full transition-all duration-100 ease-linear"
@@ -131,7 +153,6 @@ const GameArea = () => {
               />
             </div>
 
-            {/* SPRIBE badge — moved up */}
             <div
               className="flex flex-col items-center gap-1 px-5 py-2 rounded-lg -mt-1"
               style={{
