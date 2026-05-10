@@ -307,6 +307,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setBalance((b) => b + winnings);
       sndWin.current?.play().catch(() => {});
       callCallback({ betAmount: 0, winAmount: winnings });
+      setLastCashout({ multiplier: multiplierRef.current, winAmount: winnings });
       const next = [...prev] as [Bet | null, Bet | null];
       next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
       return next;
@@ -314,7 +315,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [callCallback]);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout }}>
       {children}
     </GameContext.Provider>
   );
