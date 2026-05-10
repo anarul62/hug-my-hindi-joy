@@ -253,21 +253,33 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Quick Set */}
+            {/* Quick Set — circular buttons to set crash range */}
             <div className="rounded-xl p-5 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ QUICK SET</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {["1.00", "1.50", "2.00", "5.00", "10.0", "100"].map((v) => (
-                  <button
-                    key={v}
-                    className="py-2.5 rounded-lg text-sm font-bold transition-colors"
-                    style={{ border: "1px solid rgba(255, 140, 0, 0.4)", color: "rgb(255, 140, 0)", background: "rgba(255, 140, 0, 0.06)" }}
-                  >
-                    {v}x
-                  </button>
-                ))}
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ QUICK SET — Plane Range</h3>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {["1.00", "1.50", "2.00", "5.00", "10.0", "100"].map((v) => {
+                  const active = maxCrash === v;
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => { setMaxCrash(v); setControlMode("fixed"); toast.success(`Max crash set to ${v}x`); }}
+                      className="w-[64px] h-[64px] rounded-full text-sm font-bold transition-all flex items-center justify-center"
+                      style={{
+                        border: active ? "2px solid rgb(255, 140, 0)" : "1.5px solid rgba(255, 140, 0, 0.4)",
+                        color: active ? "white" : "rgb(255, 140, 0)",
+                        background: active
+                          ? "radial-gradient(circle, rgb(255, 140, 0), rgb(220, 80, 30))"
+                          : "rgba(255, 140, 0, 0.06)",
+                        boxShadow: active ? "0 0 14px rgba(255, 140, 0, 0.5)" : "none",
+                      }}
+                    >
+                      {v}x
+                    </button>
+                  );
+                })}
               </div>
               <button
+                onClick={() => { setMinCrash("1"); setMaxCrash("100"); setControlMode("random"); toast.success("Reset to random"); }}
                 className="w-full py-3 rounded-lg text-sm font-bold"
                 style={{ background: "linear-gradient(135deg, rgb(255, 100, 0), rgb(255, 60, 60))", color: "white" }}
               >
