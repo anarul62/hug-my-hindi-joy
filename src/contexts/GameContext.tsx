@@ -19,6 +19,8 @@ type GameContextType = {
   crashHistory: number[];
   nextCrashPoint: number;
   waitingCountdown: number;
+  lastCashout: { multiplier: number; winAmount: number } | null;
+  dismissCashout: () => void;
 };
 
 type RoundRow = {
