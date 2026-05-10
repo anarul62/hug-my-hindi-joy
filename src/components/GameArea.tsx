@@ -63,8 +63,10 @@ const GameArea = () => {
       ctx.fillRect(0, 0, w, h);
 
       if (phase !== "waiting") {
-        const maxMult = 15;
-        const progress = Math.min(1, (multiplier - 1) / (maxMult - 1));
+        // At 1.5x → plane is in the middle (progress = 0.5)
+        // Curve: progress = 2(m-1) / (2(m-1)+1)
+        const k = 2 * Math.max(0, multiplier - 1);
+        const progress = Math.min(1, k / (k + 1));
         const endX = 40 + progress * (w - 80);
         const endY = h - 40 - progress * (h - 80);
 
