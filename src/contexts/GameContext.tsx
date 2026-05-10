@@ -114,7 +114,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     bgMusic.current.loop = true;
     bgMusic.current.volume = 0.3;
     sndWin.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
-    sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+    sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1704.mp3");
+    if (sndCrash.current) sndCrash.current.volume = 1.0;
     const startMusic = () => {
       bgMusic.current?.play().catch(() => {});
       document.removeEventListener("click", startMusic);
