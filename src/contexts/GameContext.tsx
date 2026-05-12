@@ -316,8 +316,20 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [callCallback]);
 
+  const cancelBet = useCallback((panelIndex: 0 | 1) => {
+    setBets((prev) => {
+      const bet = prev[panelIndex];
+      if (!bet || bet.cashedOut) return prev;
+      if (currentRoundRef.current?.phase !== "waiting") return prev;
+      setBalance((b) => b + bet.amount);
+      const next = [...prev] as [Bet | null, Bet | null];
+      next[panelIndex] = null;
+      return next;
+    });
+  }, []);
+
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, cancelBet, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout }}>
       {children}
     </GameContext.Provider>
   );
