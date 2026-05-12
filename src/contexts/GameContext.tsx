@@ -182,7 +182,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (row.phase === "crashed") {
       setMultiplier(Number(row.crash_point));
       if (prevPhase !== "crashed") {
-        sndCrash.current?.play().catch(() => {});
+        playSfx(sndCrash);
         // clear bets on crash
         setBets([null, null]);
       }
@@ -341,8 +341,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       next[panelIndex] = { amount, cashedOut: false, cashoutMultiplier: null };
       return next;
     });
+    playSfx(sndBet);
     callCallback({ betAmount: amount, winAmount: 0 });
-  }, [callCallback]);
+  }, [callCallback, playSfx]);
 
   const cashOut = useCallback((panelIndex: 0 | 1) => {
     setBets((prev) => {
@@ -350,7 +351,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!bet || bet.cashedOut) return prev;
       const winnings = parseFloat((bet.amount * multiplierRef.current).toFixed(2));
       setBalance((b) => b + winnings);
-      sndWin.current?.play().catch(() => {});
+      playSfx(sndCashOut);
+      playSfx(sndWin);
       callCallback({ betAmount: 0, winAmount: winnings });
       setLastCashout({ multiplier: multiplierRef.current, winAmount: winnings });
       const next = [...prev] as [Bet | null, Bet | null];
@@ -372,7 +374,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, cancelBet, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout }}>
+    <GameContext.Provider value={{ phase, multiplier, balance, bets, placeBet, cashOut, cancelBet, crashHistory, nextCrashPoint, waitingCountdown, lastCashout, dismissCashout, soundEnabled, musicEnabled, animationEnabled, setSoundEnabled, setMusicEnabled, setAnimationEnabled }}>
       {children}
     </GameContext.Provider>
   );
