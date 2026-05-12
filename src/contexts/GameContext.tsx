@@ -359,7 +359,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       next[panelIndex] = { ...bet, cashedOut: true, cashoutMultiplier: multiplierRef.current };
       return next;
     });
-  }, [callCallback]);
+  }, [callCallback, playSfx]);
 
   const cancelBet = useCallback((panelIndex: 0 | 1) => {
     setBets((prev) => {
