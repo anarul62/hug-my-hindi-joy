@@ -22,6 +22,12 @@ type GameContextType = {
   waitingCountdown: number;
   lastCashout: { multiplier: number; winAmount: number } | null;
   dismissCashout: () => void;
+  soundEnabled: boolean;
+  musicEnabled: boolean;
+  animationEnabled: boolean;
+  setSoundEnabled: (v: boolean) => void;
+  setMusicEnabled: (v: boolean) => void;
+  setAnimationEnabled: (v: boolean) => void;
 };
 
 type RoundRow = {
