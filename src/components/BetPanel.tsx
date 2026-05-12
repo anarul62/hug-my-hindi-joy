@@ -8,6 +8,7 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
   const [autoBet, setAutoBet] = useState(false);
   const [autoCashOutEnabled, setAutoCashOutEnabled] = useState(false);
   const [autoCashOutValue, setAutoCashOutValue] = useState(1.10);
+  const [autoCashOutInput, setAutoCashOutInput] = useState("1.10");
   const { phase, multiplier, bets, placeBet, cashOut, cancelBet, balance } = useGame();
 
   const myBet = bets[panelIndex];
@@ -109,8 +110,8 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
     }
     if (hasBet && myBet.cashedOut) {
       return {
-        background: "linear-gradient(180deg, rgb(80, 80, 85) 0%, rgb(60, 60, 65) 100%)",
-        boxShadow: "none",
+        background: "linear-gradient(180deg, rgb(230, 180, 10) 0%, rgb(200, 140, 5) 100%)",
+        boxShadow: "0 4px 15px rgba(230, 180, 10, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
       };
     }
     if (hasBet) {
@@ -261,16 +262,27 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
               style={{ background: "rgb(14, 15, 16)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
               <input
-                type="number"
-                step="0.1"
-                min="1.01"
-                value={autoCashOutValue}
-                onChange={(e) => setAutoCashOutValue(Math.max(1.01, parseFloat(e.target.value) || 1.01))}
-                className="w-[42px] bg-transparent text-[13px] font-bold text-foreground outline-none"
+                type="text"
+                inputMode="decimal"
+                value={autoCashOutInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!/^\d*\.?\d*$/.test(v)) return;
+                  setAutoCashOutInput(v);
+                  const n = parseFloat(v);
+                  if (!isNaN(n) && n >= 1.01) setAutoCashOutValue(n);
+                }}
+                onBlur={() => {
+                  const n = parseFloat(autoCashOutInput);
+                  const safe = !isNaN(n) && n >= 1.01 ? n : 1.10;
+                  setAutoCashOutValue(safe);
+                  setAutoCashOutInput(safe.toFixed(2));
+                }}
+                className="w-[48px] bg-transparent text-[13px] font-bold text-foreground outline-none"
               />
               <span className="text-[12px] text-muted-foreground">x</span>
               <button
-                onClick={() => { setAutoCashOutEnabled(false); setAutoCashOutValue(1.10); }}
+                onClick={() => { setAutoCashOutEnabled(false); setAutoCashOutValue(1.10); setAutoCashOutInput("1.10"); }}
                 className="ml-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3 w-3" />
