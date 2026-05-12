@@ -114,6 +114,31 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const bgMusic = useRef<HTMLAudioElement | null>(null);
   const sndWin = useRef<HTMLAudioElement | null>(null);
   const sndCrash = useRef<HTMLAudioElement | null>(null);
+  const sndBet = useRef<HTMLAudioElement | null>(null);
+  const sndCashOut = useRef<HTMLAudioElement | null>(null);
+
+  const readBool = (key: string, def: boolean) => {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? def : v === "1";
+    } catch { return def; }
+  };
+  const [soundEnabled, setSoundEnabledState] = useState(() => readBool("aviator_sound", true));
+  const [musicEnabled, setMusicEnabledState] = useState(() => readBool("aviator_music", false));
+  const [animationEnabled, setAnimationEnabledState] = useState(() => readBool("aviator_anim", true));
+  const soundRef = useRef(soundEnabled);
+  const musicRef = useRef(musicEnabled);
+  soundRef.current = soundEnabled;
+  musicRef.current = musicEnabled;
+  const setSoundEnabled = (v: boolean) => { setSoundEnabledState(v); try { localStorage.setItem("aviator_sound", v ? "1" : "0"); } catch {} };
+  const setMusicEnabled = (v: boolean) => { setMusicEnabledState(v); try { localStorage.setItem("aviator_music", v ? "1" : "0"); } catch {} };
+  const setAnimationEnabled = (v: boolean) => { setAnimationEnabledState(v); try { localStorage.setItem("aviator_anim", v ? "1" : "0"); } catch {} };
+
+  const playSfx = useCallback((ref: React.MutableRefObject<HTMLAudioElement | null>) => {
+    if (!soundRef.current || !ref.current) return;
+    try { ref.current.currentTime = 0; } catch {}
+    ref.current.play().catch(() => {});
+  }, []);
 
   // Audio init
   useEffect(() => {
@@ -122,14 +147,26 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     bgMusic.current.volume = 0.3;
     sndWin.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
     sndCrash.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-explosion-hit-1704.mp3");
+    sndBet.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-quick-jump-arcade-game-239.mp3");
+    sndCashOut.current = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-coin-win-notification-1992.mp3");
     if (sndCrash.current) sndCrash.current.volume = 1.0;
     const startMusic = () => {
-      bgMusic.current?.play().catch(() => {});
+      if (musicRef.current) bgMusic.current?.play().catch(() => {});
       document.removeEventListener("click", startMusic);
     };
     document.addEventListener("click", startMusic);
     return () => document.removeEventListener("click", startMusic);
   }, []);
+
+  // Toggle music on/off
+  useEffect(() => {
+    if (!bgMusic.current) return;
+    if (musicEnabled) {
+      bgMusic.current.play().catch(() => {});
+    } else {
+      bgMusic.current.pause();
+    }
+  }, [musicEnabled]);
 
   // Persist balance
   useEffect(() => {
