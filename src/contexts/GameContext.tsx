@@ -16,6 +16,7 @@ type GameContextType = {
   bets: [Bet | null, Bet | null];
   placeBet: (panelIndex: 0 | 1, amount: number) => void;
   cashOut: (panelIndex: 0 | 1) => void;
+  cancelBet: (panelIndex: 0 | 1) => void;
   crashHistory: number[];
   nextCrashPoint: number;
   waitingCountdown: number;
