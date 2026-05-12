@@ -1,19 +1,45 @@
-import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Minus, Plus, X } from "lucide-react";
 import { useGame } from "@/contexts/GameContext";
 
 const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1; showCollapse?: boolean }) => {
   const [betAmount, setBetAmount] = useState(10.0);
   const [activeTab, setActiveTab] = useState<"bet" | "auto">("bet");
-  const { phase, multiplier, bets, placeBet, cashOut, balance } = useGame();
+  const [autoBet, setAutoBet] = useState(false);
+  const [autoCashOutEnabled, setAutoCashOutEnabled] = useState(false);
+  const [autoCashOutValue, setAutoCashOutValue] = useState(1.10);
+  const { phase, multiplier, bets, placeBet, cashOut, cancelBet, balance } = useGame();
 
   const myBet = bets[panelIndex];
   const hasBet = myBet !== null;
   const canBet = !hasBet && betAmount <= balance && phase === "waiting";
   const canCashOut = hasBet && !myBet.cashedOut && phase === "flying";
+  const canCancel = hasBet && !myBet.cashedOut && phase === "waiting";
+
+  // Auto cash out
+  const cashedRef = useRef(false);
+  useEffect(() => {
+    if (phase !== "flying") { cashedRef.current = false; return; }
+    if (autoCashOutEnabled && canCashOut && !cashedRef.current && multiplier >= autoCashOutValue) {
+      cashedRef.current = true;
+      cashOut(panelIndex);
+    }
+  }, [multiplier, phase, autoCashOutEnabled, autoCashOutValue, canCashOut, cashOut, panelIndex]);
+
+  // Auto bet: place bet automatically when waiting starts
+  const placedRef = useRef(false);
+  useEffect(() => {
+    if (phase !== "waiting") { placedRef.current = false; return; }
+    if (autoBet && !hasBet && !placedRef.current && betAmount <= balance) {
+      placedRef.current = true;
+      placeBet(panelIndex, betAmount);
+    }
+  }, [phase, autoBet, hasBet, betAmount, balance, placeBet, panelIndex]);
 
   const handleMainButton = () => {
-    if (canCashOut) {
+    if (canCancel) {
+      cancelBet(panelIndex);
+    } else if (canCashOut) {
       cashOut(panelIndex);
     } else if (!hasBet) {
       placeBet(panelIndex, betAmount);
@@ -21,6 +47,14 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
   };
 
   const getButtonContent = () => {
+    if (canCancel) {
+      return (
+        <>
+          <span className="text-[22px] font-black leading-tight">Cancel</span>
+          <span className="text-[12px] font-semibold opacity-90 mt-0.5">Waiting for next round</span>
+        </>
+      );
+    }
     if (canCashOut) {
       const winAmount = (myBet!.amount * multiplier).toFixed(2);
       return (
@@ -61,6 +95,12 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
   };
 
   const getButtonStyle = () => {
+    if (canCancel) {
+      return {
+        background: "linear-gradient(180deg, rgb(220, 40, 50) 0%, rgb(180, 20, 30) 100%)",
+        boxShadow: "0 4px 15px rgba(220, 40, 50, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+      };
+    }
     if (canCashOut) {
       return {
         background: "linear-gradient(180deg, rgb(230, 160, 10) 0%, rgb(200, 120, 5) 100%)",
@@ -173,7 +213,7 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
         <div className="flex flex-1">
           <button
             onClick={handleMainButton}
-            disabled={!canBet && !canCashOut && !hasBet}
+            disabled={!canBet && !canCashOut && !canCancel && !hasBet}
             className="flex w-full flex-col items-center justify-center rounded-2xl text-white active:scale-95 transition-transform disabled:opacity-50"
             style={getButtonStyle()}
           >
@@ -181,6 +221,64 @@ const BetPanel = ({ panelIndex = 0, showCollapse = false }: { panelIndex?: 0 | 1
           </button>
         </div>
       </div>
+
+      {/* Auto bet controls */}
+      {activeTab === "auto" && (
+        <div
+          className="flex items-center justify-between gap-3 px-3 py-2 border-t border-white/10"
+          style={{ background: "rgb(22, 23, 25)" }}
+        >
+          {/* Auto bet toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-semibold text-foreground/80">Auto bet</span>
+            <button
+              onClick={() => setAutoBet((v) => !v)}
+              className="relative flex h-[22px] w-[40px] items-center rounded-full transition-colors"
+              style={{ background: autoBet ? "rgb(50, 205, 10)" : "rgb(60, 62, 66)" }}
+            >
+              <span
+                className="absolute h-[18px] w-[18px] rounded-full bg-white transition-transform"
+                style={{ transform: autoBet ? "translateX(20px)" : "translateX(2px)" }}
+              />
+            </button>
+          </div>
+
+          {/* Auto cash out */}
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-semibold text-foreground/80">Auto Cash Out</span>
+            <button
+              onClick={() => setAutoCashOutEnabled((v) => !v)}
+              className="relative flex h-[22px] w-[40px] items-center rounded-full transition-colors"
+              style={{ background: autoCashOutEnabled ? "rgb(50, 205, 10)" : "rgb(60, 62, 66)" }}
+            >
+              <span
+                className="absolute h-[18px] w-[18px] rounded-full bg-white transition-transform"
+                style={{ transform: autoCashOutEnabled ? "translateX(20px)" : "translateX(2px)" }}
+              />
+            </button>
+            <div
+              className="flex items-center gap-1 rounded-full px-2 py-1"
+              style={{ background: "rgb(14, 15, 16)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <input
+                type="number"
+                step="0.1"
+                min="1.01"
+                value={autoCashOutValue}
+                onChange={(e) => setAutoCashOutValue(Math.max(1.01, parseFloat(e.target.value) || 1.01))}
+                className="w-[42px] bg-transparent text-[13px] font-bold text-foreground outline-none"
+              />
+              <span className="text-[12px] text-muted-foreground">x</span>
+              <button
+                onClick={() => { setAutoCashOutEnabled(false); setAutoCashOutValue(1.10); }}
+                className="ml-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
