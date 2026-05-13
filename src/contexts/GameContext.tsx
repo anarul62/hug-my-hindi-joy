@@ -143,16 +143,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   // Audio init
   useEffect(() => {
-    bgMusic.current = new Audio("https://videotourl.com/audio/1778691255842-c85a5e1c-d54b-4798-8514-c682f767d2f1.mp3");
+    bgMusic.current = new Audio("https://www.tbgameloader.com/800/v37/home/static/media/bg_music.eed9358.mp3");
     bgMusic.current.loop = true;
-    bgMusic.current.volume = 0.5;
+    bgMusic.current.volume = 0.3;
+    sndPlaneStart.current = new Audio("https://videotourl.com/audio/1778691255842-c85a5e1c-d54b-4798-8514-c682f767d2f1.mp3");
+    sndPlaneStart.current.loop = true;
+    sndPlaneStart.current.volume = 0.5;
     sndWin.current = new Audio("https://videotourl.com/audio/1778691222543-dddd6c67-db01-4ba6-bb5c-44bef7732824.mp3");
     sndCrash.current = new Audio("https://videotourl.com/audio/1778691321940-a302dbb3-7547-46bc-97b5-51e8c02ba262.mp3");
     sndBet.current = new Audio("https://videotourl.com/audio/1778691674769-195538a7-2d6b-47a2-8add-b2b878ed5e84.mp3");
     sndCashOut.current = new Audio("https://videotourl.com/audio/1778691222543-dddd6c67-db01-4ba6-bb5c-44bef7732824.mp3");
     if (sndCrash.current) sndCrash.current.volume = 1.0;
     const startMusic = () => {
-      if (musicRef.current) bgMusic.current?.play().catch(() => {});
+      if (musicRef.current && phaseRef.current === "flying") bgMusic.current?.play().catch(() => {});
       document.removeEventListener("click", startMusic);
     };
     document.addEventListener("click", startMusic);
