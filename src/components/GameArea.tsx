@@ -62,6 +62,25 @@ const GameArea = () => {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
+      // Moving dotted axes (bottom X-axis & left Y-axis) - scrolling like real Aviator
+      if (phase === "flying" || phase === "crashed") {
+        const speed = phase === "flying" ? 60 : 0;
+        const offset = (t * speed) % 18;
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        // Bottom horizontal axis dots (move left)
+        for (let x = 30 - offset; x < w - 10; x += 18) {
+          ctx.beginPath();
+          ctx.arc(x, h - 14, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Left vertical axis dots (move down)
+        for (let y = 20 + offset; y < h - 20; y += 18) {
+          ctx.beginPath();
+          ctx.arc(14, y, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       if (phase !== "waiting") {
         // At 1.5x → plane is in the middle (progress = 0.5)
         // Curve: progress = 2(m-1) / (2(m-1)+1)
