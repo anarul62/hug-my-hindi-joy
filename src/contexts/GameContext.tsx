@@ -116,6 +116,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const sndCrash = useRef<HTMLAudioElement | null>(null);
   const sndBet = useRef<HTMLAudioElement | null>(null);
   const sndCashOut = useRef<HTMLAudioElement | null>(null);
+  const sndPlaneStart = useRef<HTMLAudioElement | null>(null);
 
   const readBool = (key: string, def: boolean) => {
     try {
