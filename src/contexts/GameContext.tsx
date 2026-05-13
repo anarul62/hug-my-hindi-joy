@@ -108,8 +108,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const roundIdRef = useRef<string>("");
   const balanceRef = useRef(balance);
   const multiplierRef = useRef(multiplier);
+  const phaseRef = useRef(phase);
   balanceRef.current = balance;
   multiplierRef.current = multiplier;
+  phaseRef.current = phase;
 
   const bgMusic = useRef<HTMLAudioElement | null>(null);
   const sndWin = useRef<HTMLAudioElement | null>(null);
