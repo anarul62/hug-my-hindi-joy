@@ -164,16 +164,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return () => document.removeEventListener("click", startMusic);
   }, []);
 
-  // Background music: play during flying, pause on waiting/crashed (only if music enabled)
+  // Background music: play plane start during waiting, bg music during flying, pause on crashed
   useEffect(() => {
-    if (!bgMusic.current) return;
-    if (musicEnabled && phase === "flying") {
+    if (!bgMusic.current || !sndPlaneStart.current) return;
+    if (musicEnabled && phase === "waiting") {
+      try { bgMusic.current.pause(); bgMusic.current.currentTime = 0; } catch {}
+      sndPlaneStart.current.play().catch(() => {});
+    } else if (musicEnabled && phase === "flying") {
+      try { sndPlaneStart.current.pause(); sndPlaneStart.current.currentTime = 0; } catch {}
       bgMusic.current.play().catch(() => {});
     } else {
-      try { bgMusic.current.pause(); } catch {}
-      if (phase !== "flying") {
-        try { bgMusic.current.currentTime = 0; } catch {}
-      }
+      try { bgMusic.current.pause(); bgMusic.current.currentTime = 0; } catch {}
+      try { sndPlaneStart.current.pause(); sndPlaneStart.current.currentTime = 0; } catch {}
     }
   }, [musicEnabled, phase]);
 
