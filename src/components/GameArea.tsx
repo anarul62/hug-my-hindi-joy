@@ -65,19 +65,27 @@ const GameArea = () => {
       // Moving dotted axes (bottom X-axis & left Y-axis) - scrolling like real Aviator
       if (phase === "flying" || phase === "crashed") {
         const speed = phase === "flying" ? 60 : 0;
-        const offset = (t * speed) % 18;
-        ctx.fillStyle = "rgba(255,255,255,0.55)";
-        // Bottom horizontal axis dots (move left)
-        for (let x = 30 - offset; x < w - 10; x += 18) {
+        const offset = (t * speed) % 32;
+        const dotRadius = 2.8;
+        // Bottom horizontal axis dots (move left) - white glow
+        for (let x = 30 - offset; x < w - 10; x += 32) {
+          ctx.shadowColor = "rgba(255,255,255,0.9)";
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
           ctx.beginPath();
-          ctx.arc(x, h - 14, 1.6, 0, Math.PI * 2);
+          ctx.arc(x, h - 14, dotRadius, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
-        // Left vertical axis dots (move down)
-        for (let y = 20 + offset; y < h - 20; y += 18) {
+        // Left vertical axis dots (move down) - blue glow
+        for (let y = 20 + offset; y < h - 20; y += 32) {
+          ctx.shadowColor = "rgba(80,150,255,0.9)";
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = "rgba(100,180,255,0.9)";
           ctx.beginPath();
-          ctx.arc(14, y, 1.6, 0, Math.PI * 2);
+          ctx.arc(14, y, dotRadius, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
       }
 
