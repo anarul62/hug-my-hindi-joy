@@ -135,22 +135,12 @@ const GameArea = () => {
             </div>
             <p className="text-[14px] font-extrabold tracking-wider text-white">OFFICIAL PARTNERS</p>
 
-            <div className="w-full max-w-[300px] h-[5px] rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="w-full max-w-[320px] h-[5px] rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.08)" }}>
               <div
                 className="h-full rounded-full transition-all duration-100 ease-linear"
                 style={{
                   width: `${((5 - waitingCountdown) / 5) * 100}%`,
-                  background: "linear-gradient(90deg, rgb(220, 40, 40), rgb(180, 30, 60))",
-                }}
-              />
-            </div>
-
-            <div className="w-full max-w-[260px] h-[4px] rounded-full overflow-hidden -mb-1" style={{ background: "rgba(255,255,255,0.08)" }}>
-              <div
-                className="h-full rounded-full transition-all duration-100 ease-linear"
-                style={{
-                  width: `${((5 - waitingCountdown) / 5) * 100}%`,
-                  background: "linear-gradient(90deg, rgb(255, 180, 40), rgb(220, 80, 30))",
+                  background: "linear-gradient(90deg, rgb(220, 40, 40), rgb(80, 100, 220))",
                 }}
               />
             </div>
