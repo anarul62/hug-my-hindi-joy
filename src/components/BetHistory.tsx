@@ -62,12 +62,13 @@ const BetHistory = () => {
               }}
             >
               <div className="col-span-4 flex items-center gap-1.5">
-                <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center text-[7px]"
-                  style={{ background: "rgb(51, 51, 51)" }}
-                >
-                  👤
-                </div>
+                <img
+                  src={bet.avatar}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover bg-[rgb(51,51,51)]"
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+                />
                 <span className="text-muted-foreground truncate">{bet.user}</span>
               </div>
               <span className="col-span-3 text-right text-foreground/80">{bet.amount.toFixed(2)}</span>
