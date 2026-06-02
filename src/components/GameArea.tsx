@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/contexts/GameContext";
+import { AVATARS } from "@/lib/fakeData";
 import CashOutToast from "./CashOutToast";
 
 const GameArea = () => {
@@ -149,6 +150,7 @@ const GameArea = () => {
         height={296}
       />
       <CashOutToast />
+      <LiveBetsBadge />
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
         {phase === "waiting" && (
           <div className="flex flex-col items-center justify-center w-full h-full gap-3 px-6">
