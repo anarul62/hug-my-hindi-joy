@@ -286,9 +286,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       } else if (r.phase === "flying" && r.started_at) {
         const startMs = new Date(r.started_at).getTime();
         const elapsed = (now - startMs) / 1000;
-        let m = computeMultiplier(elapsed);
+        const m = computeMultiplier(elapsed);
+        // Don't clamp to crash_point — keep plane animating naturally until
+        // the server transitions to "crashed". Otherwise the plane visibly
+        // freezes for a moment and players can predict the crash.
         if (m >= r.crash_point) {
-          m = r.crash_point;
           supabase.rpc("tick_game" as never).then(() => {}, () => {});
         }
         setMultiplier(parseFloat(m.toFixed(2)));
