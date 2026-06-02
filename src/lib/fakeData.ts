@@ -5,6 +5,26 @@ const firstNames = [
   "Kiran", "Shiv", "Nisha", "Tushar", "Rekha", "Sachin", "Bharat", "Divya",
 ];
 
+export const AVATARS = [
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-72.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-20.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-10.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-13.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-2.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-36.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-1.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-4.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-5.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-44.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-28.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-67.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-3.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-66.png",
+  "https://aviator-demo.spribegaming.com/assets/static/avatars/v2/av-34.png",
+];
+
+export const randomAvatar = () => AVATARS[Math.floor(Math.random() * AVATARS.length)];
+
 export const randomName = () => {
   const name = firstNames[Math.floor(Math.random() * firstNames.length)];
   return name[0] + "***" + name[name.length - 1];
@@ -26,6 +46,7 @@ export const randomMultiplier = () => {
 
 export type FakeBet = {
   user: string;
+  avatar: string;
   amount: number;
   multiplier: number | null;
   cashout: number | null;
@@ -38,6 +59,7 @@ export const generateFakeBets = (count: number): FakeBet[] => {
     const mult = won ? randomMultiplier() : null;
     return {
       user: randomName(),
+      avatar: randomAvatar(),
       amount,
       multiplier: mult,
       cashout: mult ? parseFloat((amount * mult).toFixed(2)) : null,
