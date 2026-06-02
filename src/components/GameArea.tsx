@@ -213,3 +213,43 @@ const GameArea = () => {
 };
 
 export default GameArea;
+
+const LiveBetsBadge = () => {
+  const [count, setCount] = useState(() => 3000 + Math.floor(Math.random() * 3000));
+  const [avatars] = useState(() => {
+    const shuffled = [...AVATARS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCount((c) => c + Math.floor(Math.random() * 5) + 1);
+    }, 1500);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div
+      className="absolute right-2 bottom-2 z-20 flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1"
+      style={{
+        background: "rgba(0,0,0,0.55)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div className="flex -space-x-1.5">
+        {avatars.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt=""
+            className="w-5 h-5 rounded-full object-cover"
+            style={{ border: "1.5px solid rgb(40, 130, 40)" }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+          />
+        ))}
+      </div>
+      <span className="text-[12px] font-bold text-white tabular-nums">
+        {count.toLocaleString()}
+      </span>
+    </div>
+  );
+};
