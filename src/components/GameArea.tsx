@@ -215,14 +215,13 @@ const GameArea = () => {
 export default GameArea;
 
 const LiveBetsBadge = () => {
+  const pickAvatars = () => [...AVATARS].sort(() => Math.random() - 0.5).slice(0, 3);
   const [count, setCount] = useState(() => 3000 + Math.floor(Math.random() * 3000));
-  const [avatars] = useState(() => {
-    const shuffled = [...AVATARS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3);
-  });
+  const [avatars, setAvatars] = useState<string[]>(pickAvatars);
   useEffect(() => {
     const id = setInterval(() => {
       setCount((c) => c + Math.floor(Math.random() * 5) + 1);
+      setAvatars(pickAvatars());
     }, 1500);
     return () => clearInterval(id);
   }, []);
